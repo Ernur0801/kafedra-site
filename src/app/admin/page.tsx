@@ -7,6 +7,7 @@ import { useLanguage } from "@/context/LanguageContext";
 
 const ADMIN_PASSCODE = "kafedra2026-ph";
 const AUTH_STORAGE_KEY = "kafedra_admin_unlocked_v1";
+const STORAGE_BUCKET = "articles";
 
 type ArticleRecord = {
   id: number | string;
@@ -49,6 +50,13 @@ function makeSlug(text: string): string {
   return `${base || "article"}-${suffix}`;
 }
 
+function getSafeFileExt(file: File): string {
+  const fromName = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (fromName) return fromName;
+  const fromMime = file.type.split("/")[1]?.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return fromMime || "jpg";
+}
+
 export default function AdminPage() {
   const { lang, setLang } = useLanguage();
 
@@ -65,6 +73,7 @@ export default function AdminPage() {
   const [summary, setSummary] = useState("");
   const [contentText, setContentText] = useState("");
 
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [editingId, setEditingId] = useState<number | string | null>(null);
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
 
@@ -172,6 +181,83 @@ export default function AdminPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setMessage(null);
+    setErrorMsg(null);
+
+    if (!file.type.startsWith("image/")) {
+      setErrorMsg(
+        lang === "kk"
+          ? "Тек сурет файлын таңдаңыз (JPG, PNG, WEBP т.б.)."
+          : "Выберите файл изображения (JPG, PNG, WEBP и т.д.)."
+      );
+      e.target.value = "";
+      return;
+    }
+
+    const maxSizeBytes = 8 * 1024 * 1024; // 8 MB
+    if (file.size > maxSizeBytes) {
+      setErrorMsg(
+        lang === "kk"
+          ? "Сурет көлемі 8 МБ-тан аспауы керек."
+          : "Размер изображения не должен превышать 8 МБ."
+      );
+      e.target.value = "";
+      return;
+    }
+
+    setUploadingImage(true);
+
+    try {
+      const ext = getSafeFileExt(file);
+      const uniqueName = `${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}.${ext}`;
+      const filePath = `covers/${uniqueName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: file.type || undefined,
+        });
+
+      if (uploadError) {
+        setErrorMsg(
+          lang === "kk"
+            ? `Суретті жүктеу қатесі: ${uploadError.message}`
+            : `Ошибка загрузки изображения: ${uploadError.message}`
+        );
+        return;
+      }
+
+      const { data: publicData } = supabase.storage
+        .from(STORAGE_BUCKET)
+        .getPublicUrl(filePath);
+
+      if (!publicData?.publicUrl) {
+        setErrorMsg(
+          lang === "kk"
+            ? "Жүктелген суреттің сілтемесі алынбады."
+            : "Не удалось получить публичную ссылку на изображение."
+        );
+        return;
+      }
+
+      setImage(publicData.publicUrl);
+      setMessage(
+        lang === "kk"
+          ? "Сурет жүктелді! Енді «Мақаланы жариялау» батырмасын басыңыз."
+          : "Фото загружено! Теперь нажмите «Опубликовать статью»."
+      );
+    } finally {
+      setUploadingImage(false);
+      e.target.value = "";
+    }
+  }
+
   async function handleDelete(id: number | string, articleTitle: string) {
     const confirmed = window.confirm(
       lang === "kk"
@@ -205,6 +291,15 @@ export default function AdminPage() {
     e.preventDefault();
     setMessage(null);
     setErrorMsg(null);
+
+    if (uploadingImage) {
+      setErrorMsg(
+        lang === "kk"
+          ? "Сурет әлі жүктеліп жатыр, сәл күте тұрыңыз."
+          : "Изображение ещё загружается, подождите немного."
+      );
+      return;
+    }
 
     if (!title.trim() || !summary.trim() || !contentText.trim()) {
       setErrorMsg(
@@ -508,9 +603,29 @@ export default function AdminPage() {
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">
                 {lang === "kk"
-                  ? "Сурет сілтемесі (URL) немесе дайын суретті таңдаңыз"
-                  : "Ссылка на изображение (URL) или выберите готовое фото"}
+                  ? "Фото жүктеу (ноутбук немесе телефоннан)"
+                  : "Загрузить фото (с компьютера или телефона)"}
               </label>
+              <input
+                type="file"
+                accept="image/*"
+                disabled={uploadingImage}
+                onChange={handleFileUpload}
+                className="block w-full text-sm text-slate-700 file:mr-4 file:rounded-xl file:border-0 file:bg-[#003366] file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-white hover:file:bg-[#002244] file:cursor-pointer disabled:opacity-60"
+              />
+              {uploadingImage && (
+                <p className="text-xs text-blue-700 mt-1.5 font-medium">
+                  {lang === "kk"
+                    ? "Фото жүктеліп жатыр..."
+                    : "Фото загружается..."}
+                </p>
+              )}
+
+              <p className="text-xs font-semibold text-slate-600 mt-3 mb-1.5">
+                {lang === "kk"
+                  ? "Немесе дайын суретті таңдаңыз / URL жазыңыз:"
+                  : "Или выберите готовое фото / вставьте URL:"}
+              </p>
               <div className="flex flex-wrap gap-2 mb-2">
                 {PRESET_IMAGES.map((preset) => (
                   <button
@@ -534,6 +649,16 @@ export default function AdminPage() {
                 placeholder="https://..."
                 className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-slate-900 focus:outline-none focus:border-blue-600"
               />
+
+              {image && (
+                <div className="mt-3">
+                  <img
+                    src={image}
+                    alt="Preview"
+                    className="h-40 w-full sm:w-64 object-cover rounded-xl border border-slate-200"
+                  />
+                </div>
+              )}
             </div>
 
             <div>
@@ -575,7 +700,7 @@ export default function AdminPage() {
             <div className="flex flex-wrap gap-3">
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || uploadingImage}
                 className="flex-1 rounded-xl bg-blue-700 hover:bg-blue-800 disabled:opacity-60 text-white font-semibold py-3 px-4 transition cursor-pointer"
               >
                 {loading
