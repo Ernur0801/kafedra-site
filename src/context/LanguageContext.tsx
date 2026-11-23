@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-export type Lang = "kk" | "ru";
+export type Lang = "kk" | "ru" | "en";
 
 type LanguageContextType = {
   lang: Lang;
@@ -16,14 +16,19 @@ const LanguageContext = createContext<LanguageContextType>({
 
 const LANG_STORAGE_KEY = "kafedra_site_lang_v1";
 
+function isValidLang(value: string | null): value is Lang {
+  return value === "kk" || value === "ru" || value === "en";
+}
+
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>("kk");
 
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem(LANG_STORAGE_KEY);
-      if (saved === "kk" || saved === "ru") {
+      if (isValidLang(saved)) {
         setLangState(saved);
+        document.documentElement.lang = saved;
       }
     } catch {
       // ignore storage errors
@@ -34,6 +39,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     setLangState(nextLang);
     try {
       window.localStorage.setItem(LANG_STORAGE_KEY, nextLang);
+      document.documentElement.lang = nextLang;
     } catch {
       // ignore storage errors
     }

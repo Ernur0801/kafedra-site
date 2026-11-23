@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { useLanguage } from "@/context/LanguageContext";
+import { useLanguage, type Lang } from "@/context/LanguageContext";
 
 type ArticleItem = {
   id: number | string;
@@ -16,8 +16,15 @@ type ArticleItem = {
   summary: string;
 };
 
+const LANG_OPTIONS: { code: Lang; label: string }[] = [
+  { code: "kk", label: "ҚАЗ" },
+  { code: "ru", label: "РУС" },
+  { code: "en", label: "ENG" },
+];
+
 const TEXTS = {
   kk: {
+    logoAlt: "Әл-Фараби атындағы ҚазҰУ логотипі",
     faculty: "Әл-Фараби атындағы ҚазҰУ • Филология факультеті",
     deptTitle: "Орыс филологиясы және әлем әдебиеті кафедрасы",
     deptSubtitle:
@@ -36,6 +43,7 @@ const TEXTS = {
     footerCopy: "© 2026 Әл-Фараби атындағы ҚазҰУ",
   },
   ru: {
+    logoAlt: "Логотип КазНУ им. аль-Фараби",
     faculty: "КазНУ им. аль-Фараби • Филологический факультет",
     deptTitle: "Кафедра русской филологии и мировой литературы",
     deptSubtitle:
@@ -52,6 +60,25 @@ const TEXTS = {
     footerAbout:
       "Кафедра русской филологии и мировой литературы — научно-методическая работа, литературоведение и языкознание.",
     footerCopy: "© 2026 КазНУ им. аль-Фараби",
+  },
+  en: {
+    logoAlt: "Al-Farabi Kazakh National University logo",
+    faculty: "Al-Farabi KazNU • Faculty of Philology",
+    deptTitle: "Department of Russian Philology and World Literature",
+    deptSubtitle:
+      "Featured department articles, academic and methodological news, and media publications.",
+    adminBtn: "+ Add / Manage",
+    searchPlaceholder: "Search by title, author, or keyword...",
+    allCategories: "All",
+    foundCount: (count: number) => `Articles found: ${count}`,
+    resetFilter: "Reset filter",
+    newBadge: "New",
+    readMore: "Read more →",
+    loading: "Loading articles...",
+    empty: "No articles match your search criteria.",
+    footerAbout:
+      "Department of Russian Philology and World Literature — academic methodology, literary studies, and linguistics.",
+    footerCopy: "© 2026 Al-Farabi Kazakh National University",
   },
 };
 
@@ -120,36 +147,28 @@ export default function HomePage() {
       {/* Жоғарғы бөлім (Header) */}
       <header className="bg-[#003366] text-white shadow-md">
         <div className="max-w-5xl mx-auto px-4 py-8">
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <p className="text-amber-400 text-xs font-semibold uppercase tracking-wider">
               {t.faculty}
             </p>
 
             <div className="flex items-center gap-2">
-              {/* Тіл ауыстырғыш KZ / RU */}
+              {/* Тіл ауыстырғыш ҚАЗ / РУС / ENG */}
               <div className="inline-flex rounded-lg bg-white/10 p-0.5 border border-white/20">
-                <button
-                  type="button"
-                  onClick={() => setLang("kk")}
-                  className={`px-2.5 py-1 rounded-md text-xs font-bold transition cursor-pointer ${
-                    lang === "kk"
-                      ? "bg-amber-400 text-slate-950"
-                      : "text-white hover:bg-white/10"
-                  }`}
-                >
-                  ҚАЗ
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLang("ru")}
-                  className={`px-2.5 py-1 rounded-md text-xs font-bold transition cursor-pointer ${
-                    lang === "ru"
-                      ? "bg-amber-400 text-slate-950"
-                      : "text-white hover:bg-white/10"
-                  }`}
-                >
-                  РУС
-                </button>
+                {LANG_OPTIONS.map((item) => (
+                  <button
+                    key={item.code}
+                    type="button"
+                    onClick={() => setLang(item.code)}
+                    className={`px-2.5 py-1 rounded-md text-xs font-bold transition cursor-pointer ${
+                      lang === item.code
+                        ? "bg-amber-400 text-slate-950"
+                        : "text-white hover:bg-white/10"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
               </div>
 
               <Link
@@ -161,12 +180,21 @@ export default function HomePage() {
             </div>
           </div>
 
-          <h1 className="text-2xl md:text-3xl font-bold leading-snug">
-            {t.deptTitle}
-          </h1>
-          <p className="text-slate-200 text-sm mt-2 max-w-2xl">
-            {t.deptSubtitle}
-          </p>
+          <div className="flex items-start sm:items-center gap-4">
+            <img
+              src="/kaznu-logo.png"
+              alt={t.logoAlt}
+              className="w-14 h-14 sm:w-16 sm:h-16 object-contain bg-white rounded-xl p-1.5 shrink-0 shadow-sm"
+            />
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold leading-snug">
+                {t.deptTitle}
+              </h1>
+              <p className="text-slate-200 text-sm mt-1.5 max-w-2xl">
+                {t.deptSubtitle}
+              </p>
+            </div>
+          </div>
         </div>
       </header>
 

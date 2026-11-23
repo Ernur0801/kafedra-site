@@ -4,7 +4,7 @@ import React, { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { useLanguage } from "@/context/LanguageContext";
+import { useLanguage, type Lang } from "@/context/LanguageContext";
 
 type ArticleDetail = {
   id: number | string;
@@ -18,8 +18,15 @@ type ArticleDetail = {
   content: string[] | string | null;
 };
 
+const LANG_OPTIONS: { code: Lang; label: string }[] = [
+  { code: "kk", label: "ҚАЗ" },
+  { code: "ru", label: "РУС" },
+  { code: "en", label: "ENG" },
+];
+
 const TEXTS = {
   kk: {
+    logoAlt: "Әл-Фараби атындағы ҚазҰУ логотипі",
     backHome: "← Басты бетке қайту",
     copyLink: "Сілтемені көшіру",
     copied: "✓ Сілтеме көшірілді",
@@ -33,6 +40,7 @@ const TEXTS = {
     authorLabel: "Авторы:",
   },
   ru: {
+    logoAlt: "Логотип КазНУ им. аль-Фараби",
     backHome: "← На главную страницу",
     copyLink: "Скопировать ссылку",
     copied: "✓ Ссылка скопирована",
@@ -44,6 +52,20 @@ const TEXTS = {
     goHome: "На главную",
     readTime: (mins: number) => `~${mins} мин чтения`,
     authorLabel: "Автор:",
+  },
+  en: {
+    logoAlt: "Al-Farabi Kazakh National University logo",
+    backHome: "← Back to home",
+    copyLink: "Copy link",
+    copied: "✓ Link copied",
+    printPdf: "Print / PDF",
+    loading: "Loading...",
+    notFoundTitle: "Article not found",
+    notFoundDesc:
+      "The requested article may have been removed or the link is invalid.",
+    goHome: "Go to home",
+    readTime: (mins: number) => `~${mins} min read`,
+    authorLabel: "Author:",
   },
 };
 
@@ -125,35 +147,32 @@ function ArticleContent() {
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6 print:hidden">
         <Link
           href="/"
-          className="text-sm font-medium text-[#003366] hover:underline"
+          className="inline-flex items-center gap-2.5 text-sm font-medium text-[#003366] hover:underline"
         >
-          {t.backHome}
+          <img
+            src="/kaznu-logo.png"
+            alt={t.logoAlt}
+            className="w-7 h-7 object-contain bg-white rounded-md p-0.5 border border-slate-200"
+          />
+          <span>{t.backHome}</span>
         </Link>
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="inline-flex rounded-lg bg-slate-100 p-0.5 border border-slate-200">
-            <button
-              type="button"
-              onClick={() => setLang("kk")}
-              className={`px-2 py-1 rounded-md text-xs font-bold transition cursor-pointer ${
-                lang === "kk"
-                  ? "bg-[#003366] text-white"
-                  : "text-slate-700 hover:bg-slate-200"
-              }`}
-            >
-              ҚАЗ
-            </button>
-            <button
-              type="button"
-              onClick={() => setLang("ru")}
-              className={`px-2 py-1 rounded-md text-xs font-bold transition cursor-pointer ${
-                lang === "ru"
-                  ? "bg-[#003366] text-white"
-                  : "text-slate-700 hover:bg-slate-200"
-              }`}
-            >
-              РУС
-            </button>
+            {LANG_OPTIONS.map((item) => (
+              <button
+                key={item.code}
+                type="button"
+                onClick={() => setLang(item.code)}
+                className={`px-2 py-1 rounded-md text-xs font-bold transition cursor-pointer ${
+                  lang === item.code
+                    ? "bg-[#003366] text-white"
+                    : "text-slate-700 hover:bg-slate-200"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
           </div>
 
           {article && (
