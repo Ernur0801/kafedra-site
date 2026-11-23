@@ -8,6 +8,7 @@ import { useLanguage } from "@/context/LanguageContext";
 const ADMIN_PASSCODE = "kafedra2026-ph";
 const AUTH_STORAGE_KEY = "kafedra_admin_unlocked_v1";
 const STORAGE_BUCKET = "articles";
+const MAX_PHOTOS = 4;
 
 type ArticleRecord = {
   id: number | string;
@@ -17,6 +18,7 @@ type ArticleRecord = {
   category: string;
   author?: string | null;
   image?: string | null;
+  images?: string[] | null;
   summary: string;
   content: string[] | string | null;
 };
@@ -50,11 +52,78 @@ function makeSlug(text: string): string {
   return `${base || "article"}-${suffix}`;
 }
 
-function getSafeFileExt(file: File): string {
-  const fromName = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "");
-  if (fromName) return fromName;
-  const fromMime = file.type.split("/")[1]?.toLowerCase().replace(/[^a-z0-9]/g, "");
-  return fromMime || "jpg";
+/**
+ * Фотоны 16:9 пропорцияға ортасынан қиып (crop) және 1280x720 өлшемде JPEG қайтарады.
+ * Осылайша суреттің тек жартысы немесе басы кесіліп қалуы азаяды.
+ */
+async function cropImageTo16x9(file: File): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+
+      const targetRatio = 16 / 9;
+      const srcWidth = img.width || 1280;
+      const srcHeight = img.height || 720;
+      const srcRatio = srcWidth / srcHeight;
+
+      let cropWidth = srcWidth;
+      let cropHeight = srcHeight;
+      let offsetX = 0;
+      let offsetY = 0;
+
+      if (srcRatio > targetRatio) {
+        cropWidth = srcHeight * targetRatio;
+        offsetX = (srcWidth - cropWidth) / 2;
+      } else if (srcRatio < targetRatio) {
+        cropHeight = srcWidth / targetRatio;
+        offsetY = (srcHeight - cropHeight) / 2;
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = 1280;
+      canvas.height = 720;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("Canvas контексті алынбады"));
+        return;
+      }
+
+      ctx.drawImage(
+        img,
+        offsetX,
+        offsetY,
+        cropWidth,
+        cropHeight,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error("Суретті қию сәтсіз аяқталды"));
+            return;
+          }
+          resolve(blob);
+        },
+        "image/jpeg",
+        0.88
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Суретті оқу мүмкін болмады"));
+    };
+
+    img.src = objectUrl;
+  });
 }
 
 export default function AdminPage() {
@@ -69,7 +138,8 @@ export default function AdminPage() {
   const [date, setDate] = useState("21.11.2026");
   const [category, setCategory] = useState("Кафедра жаңалықтары");
   const [author, setAuthor] = useState("");
-  const [image, setImage] = useState(PRESET_IMAGES[0].url);
+  const [images, setImages] = useState<string[]>([PRESET_IMAGES[0].url]);
+  const [urlInput, setUrlInput] = useState("");
   const [summary, setSummary] = useState("");
   const [contentText, setContentText] = useState("");
 
@@ -153,7 +223,8 @@ export default function AdminPage() {
       lang === "kk" ? "Кафедра жаңалықтары" : "Новости кафедры"
     );
     setAuthor("");
-    setImage(PRESET_IMAGES[0].url);
+    setImages([PRESET_IMAGES[0].url]);
+    setUrlInput("");
     setSummary("");
     setContentText("");
   }
@@ -167,7 +238,18 @@ export default function AdminPage() {
     setDate(item.date || "21.11.2026");
     setCategory(item.category || "Кафедра жаңалықтары");
     setAuthor(item.author || "");
-    setImage(item.image || PRESET_IMAGES[0].url);
+
+    const combined: string[] = [];
+    if (Array.isArray(item.images)) {
+      combined.push(...item.images.filter(Boolean));
+    }
+    if (item.image && !combined.includes(item.image)) {
+      combined.unshift(item.image);
+    }
+    setImages(
+      combined.length > 0 ? combined.slice(0, MAX_PHOTOS) : [PRESET_IMAGES[0].url]
+    );
+    setUrlInput("");
     setSummary(item.summary || "");
 
     if (Array.isArray(item.content)) {
@@ -181,76 +263,133 @@ export default function AdminPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  function addImageUrl(nextUrl: string) {
+    const trimmed = nextUrl.trim();
+    if (!trimmed) return;
+
+    setErrorMsg(null);
+    if (images.length >= MAX_PHOTOS) {
+      setErrorMsg(
+        lang === "kk"
+          ? `Ең көбі ${MAX_PHOTOS} фото қосуға болады.`
+          : `Можно добавить максимум ${MAX_PHOTOS} фото.`
+      );
+      return;
+    }
+
+    if (images.includes(trimmed)) {
+      setErrorMsg(
+        lang === "kk" ? "Бұл фото тізімде бар." : "Это фото уже добавлено."
+      );
+      return;
+    }
+
+    setImages((prev) => [...prev, trimmed]);
+  }
+
+  function handleRemoveImage(index: number) {
+    setImages((prev) => prev.filter((_, idx) => idx !== index));
+  }
+
+  function handleSetMainImage(index: number) {
+    if (index <= 0 || index >= images.length) return;
+    setImages((prev) => {
+      const copy = [...prev];
+      const [chosen] = copy.splice(index, 1);
+      return [chosen, ...copy];
+    });
+  }
+
+  async function handleFilesUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const selectedFiles = e.target.files;
+    if (!selectedFiles || selectedFiles.length === 0) return;
 
     setMessage(null);
     setErrorMsg(null);
 
-    if (!file.type.startsWith("image/")) {
+    const slotsLeft = MAX_PHOTOS - images.length;
+    if (slotsLeft <= 0) {
       setErrorMsg(
         lang === "kk"
-          ? "Тек сурет файлын таңдаңыз (JPG, PNG, WEBP т.б.)."
-          : "Выберите файл изображения (JPG, PNG, WEBP и т.д.)."
+          ? `Ең көбі ${MAX_PHOTOS} фото қосуға болады. Жаңасын қосу үшін біреуін өшіріңіз.`
+          : `Максимум ${MAX_PHOTOS} фото. Удалите одно, чтобы добавить новое.`
       );
       e.target.value = "";
       return;
     }
 
+    const fileList = Array.from(selectedFiles).slice(0, slotsLeft);
     const maxSizeBytes = 8 * 1024 * 1024; // 8 MB
-    if (file.size > maxSizeBytes) {
-      setErrorMsg(
-        lang === "kk"
-          ? "Сурет көлемі 8 МБ-тан аспауы керек."
-          : "Размер изображения не должен превышать 8 МБ."
-      );
-      e.target.value = "";
-      return;
+
+    for (const file of fileList) {
+      if (!file.type.startsWith("image/")) {
+        setErrorMsg(
+          lang === "kk"
+            ? "Тек сурет файлдарын таңдаңыз (JPG, PNG, WEBP т.б.)."
+            : "Выберите файлы изображений (JPG, PNG, WEBP и т.д.)."
+        );
+        e.target.value = "";
+        return;
+      }
+      if (file.size > maxSizeBytes) {
+        setErrorMsg(
+          lang === "kk"
+            ? "Әр сурет көлемі 8 МБ-тан аспауы керек."
+            : "Размер каждого изображения не должен превышать 8 МБ."
+        );
+        e.target.value = "";
+        return;
+      }
     }
 
     setUploadingImage(true);
+    const uploadedUrls: string[] = [];
 
     try {
-      const ext = getSafeFileExt(file);
-      const uniqueName = `${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}.${ext}`;
-      const filePath = `covers/${uniqueName}`;
+      for (const file of fileList) {
+        const croppedBlob = await cropImageTo16x9(file);
+        const uniqueName = `${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}.jpg`;
+        const filePath = `covers/${uniqueName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from(STORAGE_BUCKET)
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: false,
-          contentType: file.type || undefined,
-        });
+        const { error: uploadError } = await supabase.storage
+          .from(STORAGE_BUCKET)
+          .upload(filePath, croppedBlob, {
+            cacheControl: "3600",
+            upsert: false,
+            contentType: "image/jpeg",
+          });
 
-      if (uploadError) {
-        setErrorMsg(
-          lang === "kk"
-            ? `Суретті жүктеу қатесі: ${uploadError.message}`
-            : `Ошибка загрузки изображения: ${uploadError.message}`
-        );
-        return;
+        if (uploadError) {
+          setErrorMsg(
+            lang === "kk"
+              ? `Суретті жүктеу қатесі: ${uploadError.message}`
+              : `Ошибка загрузки изображения: ${uploadError.message}`
+          );
+          return;
+        }
+
+        const { data: publicData } = supabase.storage
+          .from(STORAGE_BUCKET)
+          .getPublicUrl(filePath);
+
+        if (publicData?.publicUrl) {
+          uploadedUrls.push(publicData.publicUrl);
+        }
       }
 
-      const { data: publicData } = supabase.storage
-        .from(STORAGE_BUCKET)
-        .getPublicUrl(filePath);
-
-      if (!publicData?.publicUrl) {
-        setErrorMsg(
+      if (uploadedUrls.length > 0) {
+        setImages((prev) => [...prev, ...uploadedUrls].slice(0, MAX_PHOTOS));
+        setMessage(
           lang === "kk"
-            ? "Жүктелген суреттің сілтемесі алынбады."
-            : "Не удалось получить публичную ссылку на изображение."
+            ? `${uploadedUrls.length} фото 16:9 өлшемде қиылып жүктелді! Енді «Мақаланы жариялау» батырмасын басыңыз.`
+            : `Загружено фото: ${uploadedUrls.length} (обрезка 16:9). Нажмите «Опубликовать статью».`
         );
-        return;
       }
-
-      setImage(publicData.publicUrl);
-      setMessage(
-        lang === "kk"
-          ? "Сурет жүктелді! Енді «Мақаланы жариялау» батырмасын басыңыз."
-          : "Фото загружено! Теперь нажмите «Опубликовать статью»."
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Суретті өңдеу кезінде қате шықты";
+      setErrorMsg(
+        lang === "kk" ? `Қате: ${msg}` : `Ошибка обработки фото: ${msg}`
       );
     } finally {
       setUploadingImage(false);
@@ -315,6 +454,9 @@ export default function AdminPage() {
       .map((p) => p.trim())
       .filter(Boolean);
 
+    const finalImages = images.filter(Boolean).slice(0, MAX_PHOTOS);
+    const mainImage = finalImages[0] || PRESET_IMAGES[0].url;
+
     setLoading(true);
 
     const payload = {
@@ -323,7 +465,7 @@ export default function AdminPage() {
       category:
         category.trim() || (lang === "kk" ? "Жаңалықтар" : "Новости"),
       author: author.trim() || (lang === "kk" ? "Кафедра" : "Кафедра"),
-      image: image.trim() || PRESET_IMAGES[0].url,
+      image: mainImage,
       summary: summary.trim(),
       content: paragraphs,
     };
@@ -601,62 +743,105 @@ export default function AdminPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">
-                {lang === "kk"
-                  ? "Фото жүктеу (ноутбук немесе телефоннан)"
-                  : "Загрузить фото (с компьютера или телефона)"}
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-semibold text-slate-700">
+                  {lang === "kk"
+                    ? `Фотолар (${images.length}/${MAX_PHOTOS}) — 16:9 өлшемде қиылады`
+                    : `Фото (${images.length}/${MAX_PHOTOS}) — обрезка 16:9`}
+                </label>
+                <span className="text-xs text-slate-500">
+                  {lang === "kk" ? "1-ші фото негізгі" : "1-е фото главное"}
+                </span>
+              </div>
+
               <input
                 type="file"
                 accept="image/*"
-                disabled={uploadingImage}
-                onChange={handleFileUpload}
+                multiple
+                disabled={uploadingImage || images.length >= MAX_PHOTOS}
+                onChange={handleFilesUpload}
                 className="block w-full text-sm text-slate-700 file:mr-4 file:rounded-xl file:border-0 file:bg-[#003366] file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-white hover:file:bg-[#002244] file:cursor-pointer disabled:opacity-60"
               />
               {uploadingImage && (
                 <p className="text-xs text-blue-700 mt-1.5 font-medium">
                   {lang === "kk"
-                    ? "Фото жүктеліп жатыр..."
-                    : "Фото загружается..."}
+                    ? "Фото қиылып, жүктеліп жатыр..."
+                    : "Фото обрезается и загружается..."}
                 </p>
               )}
 
               <p className="text-xs font-semibold text-slate-600 mt-3 mb-1.5">
                 {lang === "kk"
-                  ? "Немесе дайын суретті таңдаңыз / URL жазыңыз:"
-                  : "Или выберите готовое фото / вставьте URL:"}
+                  ? "Дайын суретті қосу:"
+                  : "Добавить готовое фото:"}
               </p>
               <div className="flex flex-wrap gap-2 mb-2">
                 {PRESET_IMAGES.map((preset) => (
                   <button
                     key={preset.url}
                     type="button"
-                    onClick={() => setImage(preset.url)}
-                    className={`px-3 py-1 rounded-lg text-xs font-medium border transition cursor-pointer ${
-                      image === preset.url
-                        ? "bg-blue-50 border-blue-600 text-blue-800"
-                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
-                    }`}
+                    onClick={() => addImageUrl(preset.url)}
+                    className="px-3 py-1 rounded-lg text-xs font-medium border bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 transition cursor-pointer"
                   >
-                    {lang === "kk" ? preset.kk : preset.ru}
+                    + {lang === "kk" ? preset.kk : preset.ru}
                   </button>
                 ))}
               </div>
-              <input
-                type="text"
-                value={image}
-                onChange={(e) => setImage(e.target.value)}
-                placeholder="https://..."
-                className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-slate-900 focus:outline-none focus:border-blue-600"
-              />
 
-              {image && (
-                <div className="mt-3">
-                  <img
-                    src={image}
-                    alt="Preview"
-                    className="h-40 w-full sm:w-64 object-cover rounded-xl border border-slate-200"
-                  />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  placeholder="https://... (сілтеме арқылы фото қосу)"
+                  className="flex-1 rounded-xl border border-slate-300 px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-blue-600"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    addImageUrl(urlInput);
+                    setUrlInput("");
+                  }}
+                  className="rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 px-3.5 py-2 text-xs font-semibold text-slate-800 transition cursor-pointer"
+                >
+                  {lang === "kk" ? "Қосу" : "Добавить"}
+                </button>
+              </div>
+
+              {images.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+                  {images.map((imgUrl, idx) => (
+                    <div
+                      key={`${imgUrl}-${idx}`}
+                      className="relative aspect-video rounded-xl overflow-hidden border border-slate-200 bg-slate-100"
+                    >
+                      <img
+                        src={imgUrl}
+                        alt={`Preview ${idx + 1}`}
+                        className="h-full w-full object-cover"
+                      />
+                      {idx === 0 ? (
+                        <span className="absolute top-1.5 left-1.5 rounded bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-slate-950">
+                          {lang === "kk" ? "Негізгі" : "Главное"}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleSetMainImage(idx)}
+                          className="absolute bottom-1.5 left-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white hover:bg-black cursor-pointer"
+                        >
+                          {lang === "kk" ? "Негізгі ету" : "Сделать главным"}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage(idx)}
+                        className="absolute top-1.5 right-1.5 rounded bg-red-600 px-1.5 py-0.5 text-xs font-bold text-white hover:bg-red-700 cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
