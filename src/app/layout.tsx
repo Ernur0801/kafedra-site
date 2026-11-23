@@ -4,6 +4,7 @@ import { LanguageProvider } from "@/context/LanguageContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://kafedra-site.vercel.app"),
   title: {
     default:
       "Орыс филологиясы және әлем әдебиеті кафедрасы | Әл-Фараби атындағы ҚазҰУ",

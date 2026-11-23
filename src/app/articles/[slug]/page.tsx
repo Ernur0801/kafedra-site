@@ -1,291 +1,82 @@
-"use client";
-
-import React, { Suspense, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useParams } from "next/navigation";
+import React, { Suspense } from "react";
+import type { Metadata } from "next";
 import { supabase } from "@/lib/supabase";
-import { useLanguage, type Lang } from "@/context/LanguageContext";
-import { useTheme } from "@/context/ThemeContext";
+import ArticleClientView, { type ArticleDetail } from "./ArticleClientView";
 
-type ArticleDetail = {
-  id: number | string;
-  slug: string;
-  title: string;
-  date: string;
-  category: string;
-  author?: string | null;
-  image?: string | null;
-  summary?: string | null;
-  content: string[] | string | null;
-};
+async function fetchArticleBySlug(slug: string): Promise<ArticleDetail | null> {
+  if (!slug) return null;
+  const { data, error } = await supabase
+    .from("articles")
+    .select("*")
+    .eq("slug", slug)
+    .single();
 
-const LANG_OPTIONS: { code: Lang; label: string }[] = [
-  { code: "kk", label: "ҚАЗ" },
-  { code: "ru", label: "РУС" },
-  { code: "en", label: "ENG" },
-];
-
-const TEXTS = {
-  kk: {
-    logoAlt: "Әл-Фараби атындағы ҚазҰУ логотипі",
-    backHome: "Басты бетке қайту",
-    copyLink: "Сілтемені көшіру",
-    copied: "✓ Көшірілді",
-    printPdf: "Басып шығару / PDF",
-    lightMode: "Күндізгі",
-    darkMode: "Түнгі",
-    loading: "Жүктелуде...",
-    notFoundTitle: "Мақала табылмады",
-    notFoundDesc:
-      "Сұралған мақала жойылған немесе сілтеме қате болуы мүмкін.",
-    goHome: "Басты бетке өту",
-    readTime: (mins: number) => `~${mins} мин оқу`,
-    authorLabel: "Авторы:",
-  },
-  ru: {
-    logoAlt: "Логотип КазНУ им. аль-Фараби",
-    backHome: "На главную страницу",
-    copyLink: "Скопировать ссылку",
-    copied: "✓ Скопировано",
-    printPdf: "Печать / PDF",
-    lightMode: "Светлая",
-    darkMode: "Тёмная",
-    loading: "Загрузка...",
-    notFoundTitle: "Статья не найдена",
-    notFoundDesc:
-      "Запрашиваемая статья могла быть удалена или указана неверная ссылка.",
-    goHome: "На главную",
-    readTime: (mins: number) => `~${mins} мин чтения`,
-    authorLabel: "Автор:",
-  },
-  en: {
-    logoAlt: "Al-Farabi Kazakh National University logo",
-    backHome: "Back to home",
-    copyLink: "Copy link",
-    copied: "✓ Copied",
-    printPdf: "Print / PDF",
-    lightMode: "Light",
-    darkMode: "Dark",
-    loading: "Loading...",
-    notFoundTitle: "Article not found",
-    notFoundDesc:
-      "The requested article may have been removed or the link is invalid.",
-    goHome: "Go to home",
-    readTime: (mins: number) => `~${mins} min read`,
-    authorLabel: "Author:",
-  },
-};
-
-function ArticleContent() {
-  const { lang, setLang } = useLanguage();
-  const { theme, toggleTheme } = useTheme();
-  const t = TEXTS[lang];
-
-  const params = useParams<{ slug: string }>();
-  const rawSlug = params?.slug ?? "";
-  const slug = decodeURIComponent(rawSlug);
-
-  const [article, setArticle] = useState<ArticleDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [notFoundState, setNotFoundState] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    async function loadArticle() {
-      if (!slug) return;
-      setLoading(true);
-      setNotFoundState(false);
-
-      const { data, error } = await supabase
-        .from("articles")
-        .select("*")
-        .eq("slug", slug)
-        .single();
-
-      if (error || !data) {
-        setNotFoundState(true);
-        setArticle(null);
-      } else {
-        setArticle(data);
-      }
-      setLoading(false);
-    }
-
-    loadArticle();
-  }, [slug]);
-
-  useEffect(() => {
-    if (!article?.title) return;
-    document.title = `${article.title} | ҚазҰУ Кафедрасы`;
-
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc && article.summary) {
-      metaDesc.setAttribute("content", article.summary);
-    }
-  }, [article]);
-
-  const paragraphs = useMemo(() => {
-    if (!article?.content) return [];
-    if (Array.isArray(article.content)) {
-      return article.content.filter(
-        (p) => typeof p === "string" && p.trim() !== ""
-      );
-    }
-    if (typeof article.content === "string") {
-      return article.content
-        .split("\n")
-        .map((p) => p.trim())
-        .filter(Boolean);
-    }
-    return [];
-  }, [article]);
-
-  const readingMinutes = useMemo(() => {
-    const fullText = [article?.summary ?? "", ...paragraphs].join(" ");
-    const words = fullText.trim().split(/\s+/).filter(Boolean).length;
-    return Math.max(1, Math.ceil(words / 180));
-  }, [article, paragraphs]);
-
-  async function handleCopyLink() {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setCopied(false);
-    }
-  }
-
-  function handlePrint() {
-    window.print();
-  }
-
-  return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 transition-colors">
-      <main className="max-w-3xl mx-auto py-8 sm:py-10 px-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-7 print:hidden">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3.5 py-1.5 text-xs font-bold text-[#003366] dark:text-amber-300 hover:border-[#003366] dark:hover:border-amber-400 transition shadow-2xs"
-          >
-            <img
-              src="/kaznu-logo.png"
-              alt={t.logoAlt}
-              className="w-5 h-5 object-contain rounded-xs shrink-0"
-            />
-            <span>← {t.backHome}</span>
-          </Link>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex rounded-full bg-slate-200/80 dark:bg-slate-800 p-0.5">
-              {LANG_OPTIONS.map((item) => (
-                <button
-                  key={item.code}
-                  type="button"
-                  onClick={() => setLang(item.code)}
-                  className={`px-2.5 py-1 rounded-full text-xs font-bold transition cursor-pointer ${
-                    lang === item.code
-                      ? "bg-[#003366] dark:bg-amber-400 text-white dark:text-slate-950 shadow-2xs"
-                      : "text-slate-700 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 transition cursor-pointer"
-            >
-              {theme === "dark" ? `☀️ ${t.lightMode}` : `🌙 ${t.darkMode}`}
-            </button>
-
-            {article && (
-              <>
-                <button
-                  type="button"
-                  onClick={handleCopyLink}
-                  className="rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 px-3.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 transition cursor-pointer"
-                >
-                  {copied ? t.copied : t.copyLink}
-                </button>
-                <button
-                  type="button"
-                  onClick={handlePrint}
-                  className="rounded-full bg-[#003366] dark:bg-amber-400 hover:bg-[#002244] dark:hover:bg-amber-300 px-3.5 py-1.5 text-xs font-bold text-white dark:text-slate-950 transition cursor-pointer shadow-xs"
-                >
-                  {t.printPdf}
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-10 text-center text-slate-500 dark:text-slate-400">
-            {t.loading}
-          </div>
-        ) : notFoundState || !article ? (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 text-center">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-              {t.notFoundTitle}
-            </h1>
-            <p className="text-slate-600 dark:text-slate-300 text-sm mb-5">
-              {t.notFoundDesc}
-            </p>
-            <Link
-              href="/"
-              className="inline-block rounded-full bg-[#003366] dark:bg-amber-400 text-white dark:text-slate-950 px-5 py-2 text-xs font-bold"
-            >
-              {t.goHome}
-            </Link>
-          </div>
-        ) : (
-          <article className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 shadow-sm">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-              <span className="bg-blue-50 dark:bg-sky-950/70 text-[#003366] dark:text-sky-300 font-semibold px-2.5 py-1 rounded-full">
-                {article.category}
-              </span>
-              <span>• {article.date}</span>
-              <span>• {t.readTime(readingMinutes)}</span>
-            </div>
-
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-3 leading-tight">
-              {article.title}
-            </h1>
-
-            {article.author && (
-              <p className="text-sm text-slate-600 dark:text-slate-300 mt-2.5">
-                {t.authorLabel}{" "}
-                <span className="font-semibold text-slate-800 dark:text-slate-100">
-                  {article.author}
-                </span>
-              </p>
-            )}
-
-            {article.image && (
-              <img
-                src={article.image}
-                alt={article.title}
-                className="w-full h-64 sm:h-80 object-cover rounded-xl my-6 shadow-xs"
-              />
-            )}
-
-            <div className="space-y-4 text-slate-800 dark:text-slate-200 leading-relaxed text-base">
-              {paragraphs.map((paragraph, idx) => (
-                <p key={idx}>{paragraph}</p>
-              ))}
-            </div>
-          </article>
-        )}
-      </main>
-    </div>
-  );
+  if (error || !data) return null;
+  return data as ArticleDetail;
 }
 
-export default function ArticlePage() {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug: rawSlug } = await params;
+  const slug = decodeURIComponent(rawSlug);
+  const article = await fetchArticleBySlug(slug);
+
+  if (!article) {
+    return {
+      title: "Мақала табылмады",
+      description:
+        "Сұралған мақала табылмады — Орыс филологиясы және әлем әдебиеті кафедрасы.",
+    };
+  }
+
+  const description =
+    article.summary?.trim() ||
+    `${article.title} — Орыс филологиясы және әлем әдебиеті кафедрасы.`;
+  const imageUrl = article.image?.trim() || "/kaznu-logo.png";
+
+  return {
+    title: article.title,
+    description,
+    openGraph: {
+      title: article.title,
+      description,
+      type: "article",
+      images: [
+        {
+          url: imageUrl,
+          alt: article.title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: article.title,
+      description,
+      images: [imageUrl],
+    },
+  };
+}
+
+async function ArticleLoader({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug: rawSlug } = await params;
+  const slug = decodeURIComponent(rawSlug);
+  const initialArticle = await fetchArticleBySlug(slug);
+
+  return <ArticleClientView slug={slug} initialArticle={initialArticle} />;
+}
+
+export default function ArticlePage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
   return (
     <Suspense
       fallback={
@@ -294,7 +85,7 @@ export default function ArticlePage() {
         </main>
       }
     >
-      <ArticleContent />
+      <ArticleLoader params={params} />
     </Suspense>
   );
 }
