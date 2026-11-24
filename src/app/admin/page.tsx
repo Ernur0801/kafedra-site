@@ -1,14 +1,41 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/context/LanguageContext";
 import ArticlePhotoUploader from "@/components/ArticlePhotoUploader";
 import type { CollageLayoutType } from "@/components/ArticleGallery";
 
-const ADMIN_PASSCODE = "kafedra2026-ph";
-const AUTH_STORAGE_KEY = "kafedra_admin_unlocked_v1";
+type AdminAccount = {
+  id: string;
+  fullName: string;
+  username: string;
+  password: string;
+};
+
+const ADMIN_ACCOUNTS: AdminAccount[] = [
+  {
+    id: "nurayim",
+    fullName: "Жеңіс Нұрайым Нұрхатқызы",
+    username: "nurayim.zhenis",
+    password: "Nurayim#2026",
+  },
+  {
+    id: "ernur",
+    fullName: "Берік Ернұр Берікұлы",
+    username: "ernur.berik",
+    password: "Ernur#2026",
+  },
+  {
+    id: "alena",
+    fullName: "Демченко Алёна Сергеевна",
+    username: "alena.demchenko",
+    password: "Alena#2026",
+  },
+];
+
+const AUTH_STORAGE_KEY = "kafedra_admin_user_v1";
 const MAX_PHOTOS = 4;
 
 type ArticleRecord = {
@@ -23,6 +50,7 @@ type ArticleRecord = {
   collage_layout?: CollageLayoutType | string | null;
   summary: string;
   content: string[] | string | null;
+  views?: number | null;
 };
 
 const COLLAGE_OPTIONS: {
@@ -31,7 +59,11 @@ const COLLAGE_OPTIONS: {
   ru: string;
 }[] = [
   { value: "auto", kk: "Автоматты коллаж", ru: "Авто-коллаж" },
-  { value: "hero_stack", kk: "1 үлкен + қалғаны қатар", ru: "1 крупное + остальные сбоку" },
+  {
+    value: "hero_stack",
+    kk: "1 үлкен + қалғаны қатар",
+    ru: "1 крупное + остальные сбоку",
+  },
   { value: "grid2", kk: "2 бағанды тор", ru: "Сетка в 2 колонки" },
   { value: "row", kk: "Біртұтас қатар", ru: "В один ряд" },
 ];
@@ -68,8 +100,9 @@ function makeSlug(text: string): string {
 export default function AdminPage() {
   const { lang, setLang } = useLanguage();
 
-  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [currentAdmin, setCurrentAdmin] = useState<AdminAccount | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [loginInput, setLoginInput] = useState("");
   const [passInput, setPassInput] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
 
@@ -92,9 +125,10 @@ export default function AdminPage() {
 
   useEffect(() => {
     try {
-      const saved = window.sessionStorage.getItem(AUTH_STORAGE_KEY);
-      if (saved === "1") {
-        setIsUnlocked(true);
+      const savedId = window.sessionStorage.getItem(AUTH_STORAGE_KEY);
+      if (savedId) {
+        const found = ADMIN_ACCOUNTS.find((acc) => acc.id === savedId) || null;
+        setCurrentAdmin(found);
       }
     } catch {
       // ignore storage errors
@@ -110,39 +144,52 @@ export default function AdminPage() {
       .order("id", { ascending: false });
 
     if (!error && data) {
-      setArticles(data);
+      setArticles(data as ArticleRecord[]);
     }
   }
 
   useEffect(() => {
-    if (isUnlocked) {
+    if (currentAdmin) {
       fetchArticles();
     }
-  }, [isUnlocked]);
+  }, [currentAdmin]);
+
+  const totalViews = useMemo(() => {
+    return articles.reduce((sum, item) => sum + (item.views ?? 0), 0);
+  }, [articles]);
 
   function handleUnlock(e: React.FormEvent) {
     e.preventDefault();
     setAuthError(null);
 
-    if (passInput.trim() === ADMIN_PASSCODE) {
-      setIsUnlocked(true);
+    const normalizedLogin = loginInput.trim().toLowerCase();
+    const matched = ADMIN_ACCOUNTS.find(
+      (acc) =>
+        acc.username.toLowerCase() === normalizedLogin &&
+        acc.password === passInput.trim()
+    );
+
+    if (matched) {
+      setCurrentAdmin(matched);
+      setLoginInput("");
       setPassInput("");
       try {
-        window.sessionStorage.setItem(AUTH_STORAGE_KEY, "1");
+        window.sessionStorage.setItem(AUTH_STORAGE_KEY, matched.id);
       } catch {
         // ignore storage errors
       }
     } else {
       setAuthError(
         lang === "kk"
-          ? "Құпиясөз қате. Қайта теріп көріңіз."
-          : "Неверный пароль. Попробуйте ещё раз."
+          ? "Логин немесе құпиясөз қате. Қайта теріп көріңіз."
+          : "Неверный логин или пароль. Попробуйте ещё раз."
       );
     }
   }
 
   function handleLogout() {
-    setIsUnlocked(false);
+    setCurrentAdmin(null);
+    setLoginInput("");
     setPassInput("");
     setAuthError(null);
     try {
@@ -269,7 +316,10 @@ export default function AdminPage() {
       date: date.trim() || "2026",
       category:
         category.trim() || (lang === "kk" ? "Жаңалықтар" : "Новости"),
-      author: author.trim() || (lang === "kk" ? "Кафедра" : "Кафедра"),
+      author:
+        author.trim() ||
+        currentAdmin?.fullName ||
+        (lang === "kk" ? "Кафедра" : "Кафедра"),
       image: mainImage,
       images: finalImages,
       collage_layout: collageLayout,
@@ -319,15 +369,18 @@ export default function AdminPage() {
     const slug = makeSlug(title);
     let { error } = await supabase
       .from("articles")
-      .insert([{ ...basePayload, slug }]);
+      .insert([{ ...basePayload, slug, views: 0 }]);
 
     if (
       error &&
       (error.message.toLowerCase().includes("images") ||
-        error.message.toLowerCase().includes("collage_layout"))
+        error.message.toLowerCase().includes("collage_layout") ||
+        error.message.toLowerCase().includes("views"))
     ) {
-      const { images: _i, collage_layout: _c, ...fallbackPayload } =
-        basePayload;
+      const { images: _i, collage_layout: _c, views: _v, ...fallbackPayload } = {
+        ...basePayload,
+        views: 0,
+      };
       const retry = await supabase
         .from("articles")
         .insert([{ ...fallbackPayload, slug }]);
@@ -391,7 +444,7 @@ export default function AdminPage() {
     );
   }
 
-  if (!isUnlocked) {
+  if (!currentAdmin) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
@@ -405,12 +458,14 @@ export default function AdminPage() {
           </div>
 
           <h1 className="text-xl font-bold text-slate-900">
-            {lang === "kk" ? "Әкімші бөліміне кіру" : "Вход в раздел администратора"}
+            {lang === "kk"
+              ? "Әкімші бөліміне кіру"
+              : "Вход в раздел администратора"}
           </h1>
           <p className="text-sm text-slate-500 mt-1 mb-6">
             {lang === "kk"
-              ? "Мақалаларды қосу, өңдеу және өшіру үшін құпиясөзді енгізіңіз."
-              : "Введите пароль для добавления, редактирования и удаления статей."}
+              ? "Мақалаларды қосу, өңдеу және өшіру үшін жеке логин мен құпиясөзіңізді енгізіңіз."
+              : "Введите ваш личный логин и пароль для добавления, редактирования и удаления статей."}
           </p>
 
           {authError && (
@@ -422,12 +477,29 @@ export default function AdminPage() {
           <form onSubmit={handleUnlock} className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">
+                {lang === "kk" ? "Логин" : "Логин"}
+              </label>
+              <input
+                type="text"
+                value={loginInput}
+                onChange={(e) => setLoginInput(e.target.value)}
+                autoComplete="username"
+                placeholder={
+                  lang === "kk" ? "Логинді теріңіз..." : "Введите логин..."
+                }
+                className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-slate-900 focus:outline-none focus:border-blue-600"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">
                 {lang === "kk" ? "Құпиясөз" : "Пароль"}
               </label>
               <input
                 type="password"
                 value={passInput}
                 onChange={(e) => setPassInput(e.target.value)}
+                autoComplete="current-password"
                 placeholder={
                   lang === "kk" ? "Құпиясөзді теріңіз..." : "Введите пароль..."
                 }
@@ -475,6 +547,11 @@ export default function AdminPage() {
                 {lang === "kk"
                   ? "Әл-Фараби атындағы ҚазҰУ • Орыс филологиясы және әлем әдебиеті кафедрасы"
                   : "КазНУ им. аль-Фараби • Кафедра русской филологии и мировой литературы"}
+              </p>
+              <p className="text-xs font-semibold text-[#003366] mt-1.5">
+                {lang === "kk"
+                  ? `Кірген әкімші: ${currentAdmin.fullName} (@${currentAdmin.username})`
+                  : `Администратор: ${currentAdmin.fullName} (@${currentAdmin.username})`}
               </p>
             </div>
 
@@ -566,11 +643,7 @@ export default function AdminPage() {
                 type="text"
                 value={author}
                 onChange={(e) => setAuthor(e.target.value)}
-                placeholder={
-                  lang === "kk"
-                    ? "Мысалы: Орыс филологиясы және әлем әдебиеті кафедрасы"
-                    : "Например: Кафедра русской филологии и мировой литературы"
-                }
+                placeholder={currentAdmin.fullName}
                 className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-slate-900 focus:outline-none focus:border-blue-600"
               />
             </div>
@@ -703,11 +776,18 @@ export default function AdminPage() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
-          <h2 className="text-lg font-bold text-slate-900 mb-4">
-            {lang === "kk"
-              ? `Жарияланған мақалалар (${articles.length})`
-              : `Опубликованные статьи (${articles.length})`}
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <h2 className="text-lg font-bold text-slate-900">
+              {lang === "kk"
+                ? `Жарияланған мақалалар (${articles.length})`
+                : `Опубликованные статьи (${articles.length})`}
+            </h2>
+            <span className="text-xs font-bold text-[#003366] bg-blue-50 px-3 py-1 rounded-full">
+              {lang === "kk"
+                ? `Барлық қаралым: 👁 ${totalViews}`
+                : `Всего просмотров: 👁 ${totalViews}`}
+            </span>
+          </div>
 
           {articles.length === 0 ? (
             <p className="text-sm text-slate-500">
@@ -723,7 +803,7 @@ export default function AdminPage() {
                   <div>
                     <p className="font-semibold text-slate-900">{item.title}</p>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      {item.date} • {item.category}
+                      {item.date} • {item.category} • 👁 {item.views ?? 0}
                     </p>
                   </div>
 
