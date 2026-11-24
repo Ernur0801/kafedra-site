@@ -37,44 +37,56 @@ export default function ArticleGallery({
         : "grid2"
       : resolvedLayout;
 
-  function renderTile(src: string, idx: number, extraClass = "") {
+  function renderCard(
+    src: string,
+    idx: number,
+    className: string,
+    showBadge = false
+  ) {
     return (
       <button
         key={`${src}-${idx}`}
         type="button"
         onClick={() => setActiveIndex(idx)}
-        className={`group relative overflow-hidden bg-slate-100 dark:bg-slate-800/80 flex items-center justify-center cursor-pointer focus:outline-none ${extraClass}`}
+        className={`group relative overflow-hidden bg-slate-900/5 dark:bg-slate-950 focus:outline-none cursor-pointer ${className}`}
       >
         <img
           src={src}
           alt={`${title} — ${idx + 1}`}
-          className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-[1.02]"
+          className="w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-105"
         />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent opacity-80 group-hover:opacity-100 transition-opacity" />
+
+        {idx === 0 && showBadge && (
+          <span className="pointer-events-none absolute top-2.5 left-2.5 rounded-md bg-amber-400/95 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-slate-950 shadow-xs">
+            №1
+          </span>
+        )}
+
+        <span className="pointer-events-none absolute bottom-2 right-2 rounded-md bg-black/65 backdrop-blur-xs px-2 py-0.5 text-[11px] font-semibold text-white">
+          {idx + 1}/{list.length}
+        </span>
       </button>
     );
   }
 
-  function renderCollageFrame() {
-    if (list.length === 1 || effectiveMode === "row") {
-      const colsClass =
-        list.length === 1
-          ? "grid-cols-1"
-          : list.length === 2
+  function renderBody() {
+    if (list.length === 1) {
+      return renderCard(list[0], 0, "w-full aspect-video max-h-[440px] rounded-xl", false);
+    }
+
+    if (effectiveMode === "row") {
+      const cols =
+        list.length === 2
           ? "grid-cols-1 sm:grid-cols-2"
           : list.length === 3
           ? "grid-cols-1 sm:grid-cols-3"
           : "grid-cols-2 sm:grid-cols-4";
 
       return (
-        <div className={`grid ${colsClass} gap-2.5`}>
+        <div className={`grid ${cols} gap-2`}>
           {list.map((src, idx) =>
-            renderTile(
-              src,
-              idx,
-              list.length === 1
-                ? "max-h-[460px] w-full rounded-xl"
-                : "h-56 sm:h-64 w-full rounded-xl"
-            )
+            renderCard(src, idx, "h-48 sm:h-52 w-full rounded-xl", list.length > 2)
           )}
         </div>
       );
@@ -82,23 +94,27 @@ export default function ArticleGallery({
 
     if (effectiveMode === "grid2") {
       return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {list.map((src, idx) =>
-            renderTile(src, idx, "h-60 sm:h-68 w-full rounded-xl")
+            renderCard(src, idx, "h-52 sm:h-60 w-full rounded-xl", idx === 0)
           )}
         </div>
       );
     }
 
-    // hero_stack: сол жақта бірінші фото, оң жақта қалғандары
     const [first, ...rest] = list;
     return (
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5">
-        <div className="md:col-span-7 flex">
-          {renderTile(first, 0, "w-full min-h-[260px] max-h-[420px] rounded-xl")}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
+        <div className="md:col-span-7">
+          {renderCard(
+            first,
+            0,
+            "w-full h-64 sm:h-80 md:h-full min-h-[260px] rounded-xl",
+            true
+          )}
         </div>
         <div
-          className={`md:col-span-5 grid gap-2.5 ${
+          className={`md:col-span-5 grid gap-2 ${
             rest.length === 1
               ? "grid-cols-1"
               : rest.length === 2
@@ -107,10 +123,11 @@ export default function ArticleGallery({
           }`}
         >
           {rest.map((src, i) =>
-            renderTile(
+            renderCard(
               src,
               i + 1,
-              "w-full h-32 sm:h-36 md:h-full min-h-[110px] rounded-xl"
+              "w-full h-28 sm:h-32 md:h-full min-h-[96px] rounded-xl",
+              false
             )
           )}
         </div>
@@ -120,21 +137,21 @@ export default function ArticleGallery({
 
   return (
     <>
-      <div className="my-6 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-950/60 p-3 shadow-2xs">
-        {renderCollageFrame()}
+      <div className="my-6 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-2 sm:p-2.5 shadow-sm">
+        {renderBody()}
       </div>
 
       {activeIndex !== null && list[activeIndex] && (
         <div
           onClick={() => setActiveIndex(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
         >
           <div
             onClick={(e) => e.stopPropagation()}
             className="relative max-w-4xl w-full space-y-3"
           >
             <div className="flex items-center justify-between text-white text-sm">
-              <span>
+              <span className="font-semibold">
                 {activeIndex + 1} / {list.length}
               </span>
               <button
@@ -149,7 +166,7 @@ export default function ArticleGallery({
             <img
               src={list[activeIndex]}
               alt={`${title} — ${activeIndex + 1}`}
-              className="w-full max-h-[78vh] object-contain rounded-xl bg-black"
+              className="w-full max-h-[80vh] object-contain rounded-xl bg-black mx-auto"
             />
 
             {list.length > 1 && (
