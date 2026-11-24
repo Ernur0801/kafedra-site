@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/context/LanguageContext";
 import ArticlePhotoUploader from "@/components/ArticlePhotoUploader";
+import type { CollageLayoutType } from "@/components/ArticleGallery";
 
 const ADMIN_PASSCODE = "kafedra2026-ph";
 const AUTH_STORAGE_KEY = "kafedra_admin_unlocked_v1";
@@ -19,9 +20,21 @@ type ArticleRecord = {
   author?: string | null;
   image?: string | null;
   images?: string[] | null;
+  collage_layout?: CollageLayoutType | string | null;
   summary: string;
   content: string[] | string | null;
 };
+
+const COLLAGE_OPTIONS: {
+  value: CollageLayoutType;
+  kk: string;
+  ru: string;
+}[] = [
+  { value: "auto", kk: "Автоматты коллаж", ru: "Авто-коллаж" },
+  { value: "hero_stack", kk: "1 үлкен + қалғаны қатар", ru: "1 крупное + остальные сбоку" },
+  { value: "grid2", kk: "2 бағанды тор", ru: "Сетка в 2 колонки" },
+  { value: "row", kk: "Біртұтас қатар", ru: "В один ряд" },
+];
 
 const PRESET_IMAGES = [
   {
@@ -65,6 +78,7 @@ export default function AdminPage() {
   const [category, setCategory] = useState("Кафедра жаңалықтары");
   const [author, setAuthor] = useState("");
   const [images, setImages] = useState<string[]>([PRESET_IMAGES[0].url]);
+  const [collageLayout, setCollageLayout] = useState<CollageLayoutType>("auto");
   const [summary, setSummary] = useState("");
   const [contentText, setContentText] = useState("");
 
@@ -146,6 +160,7 @@ export default function AdminPage() {
     setCategory(lang === "kk" ? "Кафедра жаңалықтары" : "Новости кафедры");
     setAuthor("");
     setImages([PRESET_IMAGES[0].url]);
+    setCollageLayout("auto");
     setSummary("");
     setContentText("");
   }
@@ -170,6 +185,19 @@ export default function AdminPage() {
     setImages(
       combined.length > 0 ? combined.slice(0, MAX_PHOTOS) : [PRESET_IMAGES[0].url]
     );
+
+    const layoutVal = item.collage_layout;
+    if (
+      layoutVal === "auto" ||
+      layoutVal === "grid2" ||
+      layoutVal === "hero_stack" ||
+      layoutVal === "row"
+    ) {
+      setCollageLayout(layoutVal);
+    } else {
+      setCollageLayout("auto");
+    }
+
     setSummary(item.summary || "");
 
     if (Array.isArray(item.content)) {
@@ -244,6 +272,7 @@ export default function AdminPage() {
       author: author.trim() || (lang === "kk" ? "Кафедра" : "Кафедра"),
       image: mainImage,
       images: finalImages,
+      collage_layout: collageLayout,
       summary: summary.trim(),
       content: paragraphs,
     };
@@ -254,8 +283,13 @@ export default function AdminPage() {
         .update({ ...basePayload, slug: editingSlug || makeSlug(title) })
         .eq("id", editingId);
 
-      if (error && error.message.toLowerCase().includes("images")) {
-        const { images: _ignored, ...fallbackPayload } = basePayload;
+      if (
+        error &&
+        (error.message.toLowerCase().includes("images") ||
+          error.message.toLowerCase().includes("collage_layout"))
+      ) {
+        const { images: _i, collage_layout: _c, ...fallbackPayload } =
+          basePayload;
         const retry = await supabase
           .from("articles")
           .update({ ...fallbackPayload, slug: editingSlug || makeSlug(title) })
@@ -287,8 +321,13 @@ export default function AdminPage() {
       .from("articles")
       .insert([{ ...basePayload, slug }]);
 
-    if (error && error.message.toLowerCase().includes("images")) {
-      const { images: _ignored, ...fallbackPayload } = basePayload;
+    if (
+      error &&
+      (error.message.toLowerCase().includes("images") ||
+        error.message.toLowerCase().includes("collage_layout"))
+    ) {
+      const { images: _i, collage_layout: _c, ...fallbackPayload } =
+        basePayload;
       const retry = await supabase
         .from("articles")
         .insert([{ ...fallbackPayload, slug }]);
@@ -542,6 +581,30 @@ export default function AdminPage() {
               maxPhotos={MAX_PHOTOS}
               lang={lang === "ru" ? "ru" : "kk"}
             />
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                {lang === "kk"
+                  ? "Коллаж орналасу түрі:"
+                  : "Расположение фото в коллаже:"}
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {COLLAGE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setCollageLayout(opt.value)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+                      collageLayout === opt.value
+                        ? "bg-[#003366] text-white border-[#003366]"
+                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    {lang === "kk" ? opt.kk : opt.ru}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <div>
               <p className="text-xs font-semibold text-slate-600 mb-1.5">

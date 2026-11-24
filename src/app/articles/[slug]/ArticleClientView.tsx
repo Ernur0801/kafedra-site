@@ -5,7 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useLanguage, type Lang } from "@/context/LanguageContext";
 import { useTheme } from "@/context/ThemeContext";
-import ArticleGallery from "@/components/ArticleGallery";
+import ArticleGallery, { type CollageLayoutType } from "@/components/ArticleGallery";
 
 export type ArticleDetail = {
   id: number | string;
@@ -16,6 +16,7 @@ export type ArticleDetail = {
   author?: string | null;
   image?: string | null;
   images?: string[] | null;
+  collage_layout?: CollageLayoutType | string | null;
   summary?: string | null;
   content: string[] | string | null;
 };
@@ -287,7 +288,11 @@ export default function ArticleClientView({
               </p>
             )}
 
-            <ArticleGallery images={galleryImages} title={article.title} />
+            <ArticleGallery
+              images={galleryImages}
+              title={article.title}
+              layout={article.collage_layout}
+            />
 
             <div className="space-y-4 text-slate-800 dark:text-slate-200 leading-relaxed text-base">
               {paragraphs.map((paragraph, idx) => (
