@@ -19,6 +19,7 @@ export type ArticleDetail = {
   collage_layout?: CollageLayoutType | string | null;
   summary?: string | null;
   content: string[] | string | null;
+  views?: number | null;
 };
 
 const LANG_OPTIONS: { code: Lang; label: string }[] = [
@@ -42,6 +43,7 @@ const TEXTS = {
       "Сұралған мақала жойылған немесе сілтеме қате болуы мүмкін.",
     goHome: "Басты бетке өту",
     readTime: (mins: number) => `~${mins} мин оқу`,
+    viewsCount: (n: number) => `${n} қаралым`,
     authorLabel: "Авторы:",
   },
   ru: {
@@ -58,6 +60,7 @@ const TEXTS = {
       "Запрашиваемая статья могла быть удалена или указана неверная ссылка.",
     goHome: "На главную",
     readTime: (mins: number) => `~${mins} мин чтения`,
+    viewsCount: (n: number) => `${n} просмотров`,
     authorLabel: "Автор:",
   },
   en: {
@@ -74,6 +77,7 @@ const TEXTS = {
       "The requested article may have been removed or the link is invalid.",
     goHome: "Go to home",
     readTime: (mins: number) => `~${mins} min read`,
+    viewsCount: (n: number) => `${n} views`,
     authorLabel: "Author:",
   },
 };
@@ -90,6 +94,7 @@ export default function ArticleClientView({
   const t = TEXTS[lang];
 
   const [article, setArticle] = useState<ArticleDetail | null>(initialArticle);
+  const [views, setViews] = useState<number>(initialArticle?.views ?? 0);
   const [loading, setLoading] = useState(!initialArticle);
   const [notFoundState, setNotFoundState] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -97,6 +102,7 @@ export default function ArticleClientView({
   useEffect(() => {
     if (initialArticle) {
       setArticle(initialArticle);
+      setViews(initialArticle.views ?? 0);
       setLoading(false);
       return;
     }
@@ -117,12 +123,39 @@ export default function ArticleClientView({
         setArticle(null);
       } else {
         setArticle(data);
+        setViews(data.views ?? 0);
       }
       setLoading(false);
     }
 
     loadArticle();
   }, [slug, initialArticle]);
+
+  // Көрілім санын есептеу (бір сессияда 1 рет)
+  useEffect(() => {
+    const activeSlug = article?.slug || slug;
+    if (!activeSlug || !article) return;
+
+    const storageKey = `viewed_article_${activeSlug}`;
+    try {
+      if (window.sessionStorage.getItem(storageKey) === "1") {
+        return;
+      }
+      window.sessionStorage.setItem(storageKey, "1");
+    } catch {
+      // sessionStorage шектелсе де санай береміз
+    }
+
+    supabase
+      .rpc("increment_article_views", { article_slug: activeSlug })
+      .then(({ data, error }) => {
+        if (!error && typeof data === "number") {
+          setViews(data);
+        } else {
+          setViews((prev) => prev + 1);
+        }
+      });
+  }, [article, slug]);
 
   const galleryImages = useMemo(() => {
     if (!article) return [];
@@ -267,12 +300,13 @@ export default function ArticleClientView({
           </div>
         ) : (
           <article className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 shadow-sm">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+            <div className="flex flex-wrap items-center gap-2.5 text-xs text-slate-500 dark:text-slate-400">
               <span className="bg-blue-50 dark:bg-sky-950/70 text-[#003366] dark:text-sky-300 font-semibold px-2.5 py-1 rounded-full">
                 {article.category}
               </span>
               <span>• {article.date}</span>
               <span>• {t.readTime(readingMinutes)}</span>
+              <span>• 👁 {t.viewsCount(views)}</span>
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-3 leading-tight">

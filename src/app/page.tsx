@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -16,6 +15,7 @@ type ArticleItem = {
   author?: string | null;
   image: string;
   summary: string;
+  views?: number | null;
 };
 
 const LANG_OPTIONS: { code: Lang; label: string }[] = [
@@ -53,6 +53,7 @@ const TEXTS = {
     footerFaculty: "Филология факультеті",
     footerCopy: "© 2026 Әл-Фараби атындағы Қазақ ұлттық университеті",
     academic: "ҒЫЛЫМ • БІЛІМ • ӘДЕБИЕТ",
+    viewsLabel: (n: number) => `${n} қаралым`,
   },
   ru: {
     faculty: "КАЗНУ ИМЕНИ АЛЬ-ФАРАБИ",
@@ -82,6 +83,7 @@ const TEXTS = {
     footerFaculty: "Филологический факультет",
     footerCopy: "© 2026 Казахский национальный университет имени аль-Фараби",
     academic: "НАУКА • ОБРАЗОВАНИЕ • ЛИТЕРАТУРА",
+    viewsLabel: (n: number) => `${n} просмотров`,
   },
   en: {
     faculty: "AL-FARABI KAZAKH NATIONAL UNIVERSITY",
@@ -111,6 +113,7 @@ const TEXTS = {
     footerFaculty: "Faculty of Philology",
     footerCopy: "© 2026 Al-Farabi Kazakh National University",
     academic: "SCIENCE • EDUCATION • LITERATURE",
+    viewsLabel: (n: number) => `${n} views`,
   },
 };
 
@@ -130,7 +133,7 @@ export default function HomePage() {
 
       const { data, error } = await supabase
         .from("articles")
-        .select("id, slug, title, date, category, author, image, summary")
+        .select("id, slug, title, date, category, author, image, summary, views")
         .order("id", { ascending: false });
 
       if (!error && data) {
@@ -155,8 +158,7 @@ export default function HomePage() {
   const filteredArticles = useMemo(() => {
     return articles.filter((article) => {
       const matchesCategory =
-        selectedCategory === "ALL" ||
-        article.category === selectedCategory;
+        selectedCategory === "ALL" || article.category === selectedCategory;
 
       const q = searchQuery.trim().toLowerCase();
 
@@ -192,12 +194,10 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f6f7f9] dark:bg-[#090e18] text-slate-900 dark:text-slate-100 transition-colors duration-300">
-
       {/* HEADER */}
       <header className="relative z-20 bg-[#082d50] text-white border-b border-white/10">
         <div className="max-w-7xl mx-auto px-5 lg:px-8">
           <div className="min-h-[86px] flex flex-wrap items-center justify-between gap-4 py-4">
-
             <Link href="/" className="flex items-center gap-3 group">
               <img
                 src="/kaznu-logo.png"
@@ -299,7 +299,9 @@ export default function HomePage() {
           </div>
 
           <div className="absolute bottom-0 right-8 hidden lg:block opacity-[0.07] pointer-events-none">
-            <span className="text-[250px] font-serif font-bold leading-none">Ф</span>
+            <span className="text-[250px] font-serif font-bold leading-none">
+              Ф
+            </span>
           </div>
         </div>
 
@@ -309,7 +311,6 @@ export default function HomePage() {
       {/* MAIN */}
       <main className="flex-grow">
         <div className="max-w-7xl mx-auto px-5 lg:px-8 py-12 md:py-16">
-
           {/* FEATURED ARTICLE */}
           {!loading && featuredArticle && (
             <section className="mb-16">
@@ -347,6 +348,7 @@ export default function HomePage() {
                       {featuredArticle.category}
                     </span>
                     <span>{featuredArticle.date}</span>
+                    <span>• 👁 {t.viewsLabel(featuredArticle.views ?? 0)}</span>
                   </div>
 
                   <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight text-slate-900 dark:text-white">
@@ -379,7 +381,6 @@ export default function HomePage() {
 
           {/* PUBLICATIONS */}
           <section id="publications" className="scroll-mt-8">
-
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 mb-8">
               <div>
                 <p className="text-xs font-extrabold tracking-[0.2em] text-amber-600 dark:text-amber-400 mb-3">
@@ -495,7 +496,10 @@ export default function HomePage() {
                           <span className="text-[#1b527c] dark:text-blue-300">
                             {article.category}
                           </span>
-                          <span>{article.date}</span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span>{article.date}</span>
+                            <span>• 👁 {article.views ?? 0}</span>
+                          </div>
                         </div>
 
                         <h3 className="text-lg font-bold leading-snug text-slate-900 dark:text-white group-hover:text-[#1b527c] dark:group-hover:text-amber-400 transition-colors">
@@ -543,7 +547,6 @@ export default function HomePage() {
               <div className="mt-8 w-16 h-1 bg-amber-400 rounded-full" />
             </div>
           </section>
-
         </div>
       </main>
 
