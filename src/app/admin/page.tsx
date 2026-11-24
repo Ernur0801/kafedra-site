@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/context/LanguageContext";
@@ -51,6 +51,12 @@ type ArticleRecord = {
   summary: string;
   content: string[] | string | null;
   views?: number | null;
+};
+
+type FieldErrors = {
+  title?: boolean;
+  summary?: boolean;
+  content?: boolean;
 };
 
 const COLLAGE_OPTIONS: {
@@ -122,6 +128,12 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
+  const errorBannerRef = useRef<HTMLDivElement | null>(null);
+  const titleInputRef = useRef<HTMLInputElement | null>(null);
+  const summaryInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const contentInputRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     try {
@@ -157,6 +169,22 @@ export default function AdminPage() {
   const totalViews = useMemo(() => {
     return articles.reduce((sum, item) => sum + (item.views ?? 0), 0);
   }, [articles]);
+
+  function scrollToError(targetEl?: HTMLElement | null) {
+    requestAnimationFrame(() => {
+      if (errorBannerRef.current) {
+        errorBannerRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
+      if (targetEl && typeof targetEl.focus === "function") {
+        setTimeout(() => {
+          targetEl.focus({ preventScroll: true });
+        }, 250);
+      }
+    });
+  }
 
   function handleUnlock(e: React.FormEvent) {
     e.preventDefault();
@@ -210,11 +238,13 @@ export default function AdminPage() {
     setCollageLayout("auto");
     setSummary("");
     setContentText("");
+    setFieldErrors({});
   }
 
   function handleStartEdit(item: ArticleRecord) {
     setMessage(null);
     setErrorMsg(null);
+    setFieldErrors({});
     setEditingId(item.id);
     setEditingSlug(item.slug);
     setTitle(item.title || "");
@@ -276,6 +306,7 @@ export default function AdminPage() {
           ? `Өшіру кезінде қате шықты: ${error.message}`
           : `Ошибка при удалении: ${error.message}`
       );
+      scrollToError();
       return;
     }
 
@@ -292,14 +323,34 @@ export default function AdminPage() {
     setMessage(null);
     setErrorMsg(null);
 
-    if (!title.trim() || !summary.trim() || !contentText.trim()) {
+    const missingTitle = !title.trim();
+    const missingSummary = !summary.trim();
+    const missingContent = !contentText.trim();
+
+    if (missingTitle || missingSummary || missingContent) {
+      setFieldErrors({
+        title: missingTitle,
+        summary: missingSummary,
+        content: missingContent,
+      });
+
       setErrorMsg(
         lang === "kk"
-          ? "Тақырыпты, қысқаша сипаттаманы және мақала мәтінін толтырыңыз."
-          : "Заполните заголовок, краткое описание и текст статьи."
+          ? "Міндетті өрістер толтырылмаған: тақырыпты, қысқаша сипаттаманы және мақала мәтінін жазыңыз."
+          : "Не заполнены обязательные поля: укажите заголовок, краткое описание и текст статьи."
       );
+
+      const firstInvalidEl = missingTitle
+        ? titleInputRef.current
+        : missingSummary
+          ? summaryInputRef.current
+          : contentInputRef.current;
+
+      scrollToError(firstInvalidEl);
       return;
     }
+
+    setFieldErrors({});
 
     const paragraphs = contentText
       .split(/\n\s*\n|\n/)
@@ -316,10 +367,7 @@ export default function AdminPage() {
       date: date.trim() || "2026",
       category:
         category.trim() || (lang === "kk" ? "Жаңалықтар" : "Новости"),
-      author:
-        author.trim() ||
-        currentAdmin?.fullName ||
-        (lang === "kk" ? "Кафедра" : "Кафедра"),
+      author: author.trim() || "Кафедра",
       image: mainImage,
       images: finalImages,
       collage_layout: collageLayout,
@@ -355,6 +403,7 @@ export default function AdminPage() {
             ? `Жаңарту кезінде қате шықты: ${error.message}`
             : `Ошибка при обновлении: ${error.message}`
         );
+        scrollToError();
         return;
       }
 
@@ -395,6 +444,7 @@ export default function AdminPage() {
           ? `Сақтау кезінде қате шықты: ${error.message}`
           : `Ошибка при сохранении: ${error.message}`
       );
+      scrollToError();
       return;
     }
 
@@ -580,27 +630,48 @@ export default function AdminPage() {
           )}
 
           {errorMsg && (
-            <div className="mb-5 p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm font-medium">
-              {errorMsg}
+            <div
+              ref={errorBannerRef}
+              role="alert"
+              className="mb-5 p-4 rounded-xl bg-red-50 border-2 border-red-300 text-red-800 text-sm font-semibold"
+            >
+              ⚠️ {errorMsg}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">
                 {lang === "kk" ? "Мақала тақырыбы *" : "Заголовок статьи *"}
               </label>
               <input
+                ref={titleInputRef}
                 type="text"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  if (fieldErrors.title && e.target.value.trim()) {
+                    setFieldErrors((prev) => ({ ...prev, title: false }));
+                  }
+                }}
                 placeholder={
                   lang === "kk"
                     ? "Мысалы: Кафедрада ғылыми семинар өтті"
                     : "Например: На кафедре прошёл научный семинар"
                 }
-                className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-slate-900 focus:outline-none focus:border-blue-600"
+                className={`w-full rounded-xl border px-3.5 py-2.5 text-slate-900 focus:outline-none ${
+                  fieldErrors.title
+                    ? "border-red-500 bg-red-50/40 focus:border-red-600"
+                    : "border-slate-300 focus:border-blue-600"
+                }`}
               />
+              {fieldErrors.title && (
+                <p className="mt-1 text-xs font-semibold text-red-600">
+                  {lang === "kk"
+                    ? "Мақала тақырыбын жазыңыз."
+                    : "Укажите заголовок статьи."}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -643,7 +714,11 @@ export default function AdminPage() {
                 type="text"
                 value={author}
                 onChange={(e) => setAuthor(e.target.value)}
-                placeholder={currentAdmin.fullName}
+                placeholder={
+                  lang === "kk"
+                    ? "Мысалы: Орыс филологиясы және әлем әдебиеті кафедрасы"
+                    : "Например: Кафедра русской филологии и мировой литературы"
+                }
                 className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-slate-900 focus:outline-none focus:border-blue-600"
               />
             </div>
@@ -712,16 +787,33 @@ export default function AdminPage() {
                 {lang === "kk" ? "Қысқаша сипаттама *" : "Краткое описание *"}
               </label>
               <textarea
+                ref={summaryInputRef}
                 rows={2}
                 value={summary}
-                onChange={(e) => setSummary(e.target.value)}
+                onChange={(e) => {
+                  setSummary(e.target.value);
+                  if (fieldErrors.summary && e.target.value.trim()) {
+                    setFieldErrors((prev) => ({ ...prev, summary: false }));
+                  }
+                }}
                 placeholder={
                   lang === "kk"
                     ? "Басты бетте карточкада көрінетін қысқа мәтін..."
                     : "Краткий текст, который отображается в карточке на главной..."
                 }
-                className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-slate-900 focus:outline-none focus:border-blue-600"
+                className={`w-full rounded-xl border px-3.5 py-2.5 text-slate-900 focus:outline-none ${
+                  fieldErrors.summary
+                    ? "border-red-500 bg-red-50/40 focus:border-red-600"
+                    : "border-slate-300 focus:border-blue-600"
+                }`}
               />
+              {fieldErrors.summary && (
+                <p className="mt-1 text-xs font-semibold text-red-600">
+                  {lang === "kk"
+                    ? "Қысқаша сипаттаманы толтырыңыз."
+                    : "Заполните краткое описание."}
+                </p>
+              )}
             </div>
 
             <div>
@@ -731,16 +823,33 @@ export default function AdminPage() {
                   : "Полный текст статьи *"}
               </label>
               <textarea
+                ref={contentInputRef}
                 rows={7}
                 value={contentText}
-                onChange={(e) => setContentText(e.target.value)}
+                onChange={(e) => {
+                  setContentText(e.target.value);
+                  if (fieldErrors.content && e.target.value.trim()) {
+                    setFieldErrors((prev) => ({ ...prev, content: false }));
+                  }
+                }}
                 placeholder={
                   lang === "kk"
                     ? "Мақала мәтінін осында жазыңыз. Жаңа азатжол үшін Enter басыңыз..."
                     : "Введите текст статьи. Для нового абзаца нажмите Enter..."
                 }
-                className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-slate-900 focus:outline-none focus:border-blue-600"
+                className={`w-full rounded-xl border px-3.5 py-2.5 text-slate-900 focus:outline-none ${
+                  fieldErrors.content
+                    ? "border-red-500 bg-red-50/40 focus:border-red-600"
+                    : "border-slate-300 focus:border-blue-600"
+                }`}
               />
+              {fieldErrors.content && (
+                <p className="mt-1 text-xs font-semibold text-red-600">
+                  {lang === "kk"
+                    ? "Мақаланың толық мәтінін жазыңыз."
+                    : "Введите полный текст статьи."}
+                </p>
+              )}
             </div>
 
             <div className="flex flex-wrap gap-3">
