@@ -4,10 +4,10 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/context/LanguageContext";
+import ArticlePhotoUploader from "@/components/ArticlePhotoUploader";
 
 const ADMIN_PASSCODE = "kafedra2026-ph";
 const AUTH_STORAGE_KEY = "kafedra_admin_unlocked_v1";
-const STORAGE_BUCKET = "articles";
 const MAX_PHOTOS = 4;
 
 type ArticleRecord = {
@@ -52,80 +52,6 @@ function makeSlug(text: string): string {
   return `${base || "article"}-${suffix}`;
 }
 
-/**
- * Фотоны 16:9 пропорцияға ортасынан қиып (crop) және 1280x720 өлшемде JPEG қайтарады.
- * Осылайша суреттің тек жартысы немесе басы кесіліп қалуы азаяды.
- */
-async function cropImageTo16x9(file: File): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const objectUrl = URL.createObjectURL(file);
-
-    img.onload = () => {
-      URL.revokeObjectURL(objectUrl);
-
-      const targetRatio = 16 / 9;
-      const srcWidth = img.width || 1280;
-      const srcHeight = img.height || 720;
-      const srcRatio = srcWidth / srcHeight;
-
-      let cropWidth = srcWidth;
-      let cropHeight = srcHeight;
-      let offsetX = 0;
-      let offsetY = 0;
-
-      if (srcRatio > targetRatio) {
-        cropWidth = srcHeight * targetRatio;
-        offsetX = (srcWidth - cropWidth) / 2;
-      } else if (srcRatio < targetRatio) {
-        cropHeight = srcWidth / targetRatio;
-        offsetY = (srcHeight - cropHeight) / 2;
-      }
-
-      const canvas = document.createElement("canvas");
-      canvas.width = 1280;
-      canvas.height = 720;
-
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        reject(new Error("Canvas контексті алынбады"));
-        return;
-      }
-
-      ctx.drawImage(
-        img,
-        offsetX,
-        offsetY,
-        cropWidth,
-        cropHeight,
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      );
-
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) {
-            reject(new Error("Суретті қию сәтсіз аяқталды"));
-            return;
-          }
-          resolve(blob);
-        },
-        "image/jpeg",
-        0.88
-      );
-    };
-
-    img.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
-      reject(new Error("Суретті оқу мүмкін болмады"));
-    };
-
-    img.src = objectUrl;
-  });
-}
-
 export default function AdminPage() {
   const { lang, setLang } = useLanguage();
 
@@ -135,15 +61,13 @@ export default function AdminPage() {
   const [authError, setAuthError] = useState<string | null>(null);
 
   const [title, setTitle] = useState("");
-  const [date, setDate] = useState("21.11.2026");
+  const [date, setDate] = useState("24.11.2026");
   const [category, setCategory] = useState("Кафедра жаңалықтары");
   const [author, setAuthor] = useState("");
   const [images, setImages] = useState<string[]>([PRESET_IMAGES[0].url]);
-  const [urlInput, setUrlInput] = useState("");
   const [summary, setSummary] = useState("");
   const [contentText, setContentText] = useState("");
 
-  const [uploadingImage, setUploadingImage] = useState(false);
   const [editingId, setEditingId] = useState<number | string | null>(null);
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
 
@@ -218,13 +142,10 @@ export default function AdminPage() {
     setEditingId(null);
     setEditingSlug(null);
     setTitle("");
-    setDate("21.11.2026");
-    setCategory(
-      lang === "kk" ? "Кафедра жаңалықтары" : "Новости кафедры"
-    );
+    setDate("24.11.2026");
+    setCategory(lang === "kk" ? "Кафедра жаңалықтары" : "Новости кафедры");
     setAuthor("");
     setImages([PRESET_IMAGES[0].url]);
-    setUrlInput("");
     setSummary("");
     setContentText("");
   }
@@ -235,7 +156,7 @@ export default function AdminPage() {
     setEditingId(item.id);
     setEditingSlug(item.slug);
     setTitle(item.title || "");
-    setDate(item.date || "21.11.2026");
+    setDate(item.date || "24.11.2026");
     setCategory(item.category || "Кафедра жаңалықтары");
     setAuthor(item.author || "");
 
@@ -249,7 +170,6 @@ export default function AdminPage() {
     setImages(
       combined.length > 0 ? combined.slice(0, MAX_PHOTOS) : [PRESET_IMAGES[0].url]
     );
-    setUrlInput("");
     setSummary(item.summary || "");
 
     if (Array.isArray(item.content)) {
@@ -261,140 +181,6 @@ export default function AdminPage() {
     }
 
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function addImageUrl(nextUrl: string) {
-    const trimmed = nextUrl.trim();
-    if (!trimmed) return;
-
-    setErrorMsg(null);
-    if (images.length >= MAX_PHOTOS) {
-      setErrorMsg(
-        lang === "kk"
-          ? `Ең көбі ${MAX_PHOTOS} фото қосуға болады.`
-          : `Можно добавить максимум ${MAX_PHOTOS} фото.`
-      );
-      return;
-    }
-
-    if (images.includes(trimmed)) {
-      setErrorMsg(
-        lang === "kk" ? "Бұл фото тізімде бар." : "Это фото уже добавлено."
-      );
-      return;
-    }
-
-    setImages((prev) => [...prev, trimmed]);
-  }
-
-  function handleRemoveImage(index: number) {
-    setImages((prev) => prev.filter((_, idx) => idx !== index));
-  }
-
-  function handleSetMainImage(index: number) {
-    if (index <= 0 || index >= images.length) return;
-    setImages((prev) => {
-      const copy = [...prev];
-      const [chosen] = copy.splice(index, 1);
-      return [chosen, ...copy];
-    });
-  }
-
-  async function handleFilesUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const selectedFiles = e.target.files;
-    if (!selectedFiles || selectedFiles.length === 0) return;
-
-    setMessage(null);
-    setErrorMsg(null);
-
-    const slotsLeft = MAX_PHOTOS - images.length;
-    if (slotsLeft <= 0) {
-      setErrorMsg(
-        lang === "kk"
-          ? `Ең көбі ${MAX_PHOTOS} фото қосуға болады. Жаңасын қосу үшін біреуін өшіріңіз.`
-          : `Максимум ${MAX_PHOTOS} фото. Удалите одно, чтобы добавить новое.`
-      );
-      e.target.value = "";
-      return;
-    }
-
-    const fileList = Array.from(selectedFiles).slice(0, slotsLeft);
-    const maxSizeBytes = 8 * 1024 * 1024; // 8 MB
-
-    for (const file of fileList) {
-      if (!file.type.startsWith("image/")) {
-        setErrorMsg(
-          lang === "kk"
-            ? "Тек сурет файлдарын таңдаңыз (JPG, PNG, WEBP т.б.)."
-            : "Выберите файлы изображений (JPG, PNG, WEBP и т.д.)."
-        );
-        e.target.value = "";
-        return;
-      }
-      if (file.size > maxSizeBytes) {
-        setErrorMsg(
-          lang === "kk"
-            ? "Әр сурет көлемі 8 МБ-тан аспауы керек."
-            : "Размер каждого изображения не должен превышать 8 МБ."
-        );
-        e.target.value = "";
-        return;
-      }
-    }
-
-    setUploadingImage(true);
-    const uploadedUrls: string[] = [];
-
-    try {
-      for (const file of fileList) {
-        const croppedBlob = await cropImageTo16x9(file);
-        const uniqueName = `${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}.jpg`;
-        const filePath = `covers/${uniqueName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from(STORAGE_BUCKET)
-          .upload(filePath, croppedBlob, {
-            cacheControl: "3600",
-            upsert: false,
-            contentType: "image/jpeg",
-          });
-
-        if (uploadError) {
-          setErrorMsg(
-            lang === "kk"
-              ? `Суретті жүктеу қатесі: ${uploadError.message}`
-              : `Ошибка загрузки изображения: ${uploadError.message}`
-          );
-          return;
-        }
-
-        const { data: publicData } = supabase.storage
-          .from(STORAGE_BUCKET)
-          .getPublicUrl(filePath);
-
-        if (publicData?.publicUrl) {
-          uploadedUrls.push(publicData.publicUrl);
-        }
-      }
-
-      if (uploadedUrls.length > 0) {
-        setImages((prev) => [...prev, ...uploadedUrls].slice(0, MAX_PHOTOS));
-        setMessage(
-          lang === "kk"
-            ? `${uploadedUrls.length} фото 16:9 өлшемде қиылып жүктелді! Енді «Мақаланы жариялау» батырмасын басыңыз.`
-            : `Загружено фото: ${uploadedUrls.length} (обрезка 16:9). Нажмите «Опубликовать статью».`
-        );
-      }
-    } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Суретті өңдеу кезінде қате шықты";
-      setErrorMsg(
-        lang === "kk" ? `Қате: ${msg}` : `Ошибка обработки фото: ${msg}`
-      );
-    } finally {
-      setUploadingImage(false);
-      e.target.value = "";
-    }
   }
 
   async function handleDelete(id: number | string, articleTitle: string) {
@@ -431,15 +217,6 @@ export default function AdminPage() {
     setMessage(null);
     setErrorMsg(null);
 
-    if (uploadingImage) {
-      setErrorMsg(
-        lang === "kk"
-          ? "Сурет әлі жүктеліп жатыр, сәл күте тұрыңыз."
-          : "Изображение ещё загружается, подождите немного."
-      );
-      return;
-    }
-
     if (!title.trim() || !summary.trim() || !contentText.trim()) {
       setErrorMsg(
         lang === "kk"
@@ -459,22 +236,32 @@ export default function AdminPage() {
 
     setLoading(true);
 
-    const payload = {
+    const basePayload = {
       title: title.trim(),
       date: date.trim() || "2026",
       category:
         category.trim() || (lang === "kk" ? "Жаңалықтар" : "Новости"),
       author: author.trim() || (lang === "kk" ? "Кафедра" : "Кафедра"),
       image: mainImage,
+      images: finalImages,
       summary: summary.trim(),
       content: paragraphs,
     };
 
     if (editingId !== null) {
-      const { error } = await supabase
+      let { error } = await supabase
         .from("articles")
-        .update({ ...payload, slug: editingSlug || makeSlug(title) })
+        .update({ ...basePayload, slug: editingSlug || makeSlug(title) })
         .eq("id", editingId);
+
+      if (error && error.message.toLowerCase().includes("images")) {
+        const { images: _ignored, ...fallbackPayload } = basePayload;
+        const retry = await supabase
+          .from("articles")
+          .update({ ...fallbackPayload, slug: editingSlug || makeSlug(title) })
+          .eq("id", editingId);
+        error = retry.error;
+      }
 
       setLoading(false);
 
@@ -496,9 +283,17 @@ export default function AdminPage() {
     }
 
     const slug = makeSlug(title);
-    const { error } = await supabase
+    let { error } = await supabase
       .from("articles")
-      .insert([{ ...payload, slug }]);
+      .insert([{ ...basePayload, slug }]);
+
+    if (error && error.message.toLowerCase().includes("images")) {
+      const { images: _ignored, ...fallbackPayload } = basePayload;
+      const retry = await supabase
+        .from("articles")
+        .insert([{ ...fallbackPayload, slug }]);
+      error = retry.error;
+    }
 
     setLoading(false);
 
@@ -625,7 +420,6 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4">
       <div className="max-w-3xl mx-auto space-y-8">
-        {/* Форма бөлімі */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
             <div>
@@ -702,7 +496,7 @@ export default function AdminPage() {
                   type="text"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  placeholder="21.11.2026"
+                  placeholder="24.11.2026"
                   className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-slate-900 focus:outline-none focus:border-blue-600"
                 />
               </div>
@@ -742,108 +536,39 @@ export default function AdminPage() {
               />
             </div>
 
+            <ArticlePhotoUploader
+              images={images}
+              onChange={setImages}
+              maxPhotos={MAX_PHOTOS}
+              lang={lang === "ru" ? "ru" : "kk"}
+            />
+
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-sm font-semibold text-slate-700">
-                  {lang === "kk"
-                    ? `Фотолар (${images.length}/${MAX_PHOTOS}) — 16:9 өлшемде қиылады`
-                    : `Фото (${images.length}/${MAX_PHOTOS}) — обрезка 16:9`}
-                </label>
-                <span className="text-xs text-slate-500">
-                  {lang === "kk" ? "1-ші фото негізгі" : "1-е фото главное"}
-                </span>
-              </div>
-
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                disabled={uploadingImage || images.length >= MAX_PHOTOS}
-                onChange={handleFilesUpload}
-                className="block w-full text-sm text-slate-700 file:mr-4 file:rounded-xl file:border-0 file:bg-[#003366] file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-white hover:file:bg-[#002244] file:cursor-pointer disabled:opacity-60"
-              />
-              {uploadingImage && (
-                <p className="text-xs text-blue-700 mt-1.5 font-medium">
-                  {lang === "kk"
-                    ? "Фото қиылып, жүктеліп жатыр..."
-                    : "Фото обрезается и загружается..."}
-                </p>
-              )}
-
-              <p className="text-xs font-semibold text-slate-600 mt-3 mb-1.5">
+              <p className="text-xs font-semibold text-slate-600 mb-1.5">
                 {lang === "kk"
-                  ? "Дайын суретті қосу:"
-                  : "Добавить готовое фото:"}
+                  ? "Дайын суретті тез қосу:"
+                  : "Быстро добавить готовое фото:"}
               </p>
-              <div className="flex flex-wrap gap-2 mb-2">
+              <div className="flex flex-wrap gap-2">
                 {PRESET_IMAGES.map((preset) => (
                   <button
                     key={preset.url}
                     type="button"
-                    onClick={() => addImageUrl(preset.url)}
-                    className="px-3 py-1 rounded-lg text-xs font-medium border bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                    disabled={images.length >= MAX_PHOTOS}
+                    onClick={() => {
+                      if (
+                        images.length < MAX_PHOTOS &&
+                        !images.includes(preset.url)
+                      ) {
+                        setImages((prev) => [...prev, preset.url]);
+                      }
+                    }}
+                    className="px-3 py-1 rounded-lg text-xs font-medium border bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-50 transition cursor-pointer"
                   >
                     + {lang === "kk" ? preset.kk : preset.ru}
                   </button>
                 ))}
               </div>
-
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={urlInput}
-                  onChange={(e) => setUrlInput(e.target.value)}
-                  placeholder="https://... (сілтеме арқылы фото қосу)"
-                  className="flex-1 rounded-xl border border-slate-300 px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-blue-600"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    addImageUrl(urlInput);
-                    setUrlInput("");
-                  }}
-                  className="rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 px-3.5 py-2 text-xs font-semibold text-slate-800 transition cursor-pointer"
-                >
-                  {lang === "kk" ? "Қосу" : "Добавить"}
-                </button>
-              </div>
-
-              {images.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-                  {images.map((imgUrl, idx) => (
-                    <div
-                      key={`${imgUrl}-${idx}`}
-                      className="relative aspect-video rounded-xl overflow-hidden border border-slate-200 bg-slate-100"
-                    >
-                      <img
-                        src={imgUrl}
-                        alt={`Preview ${idx + 1}`}
-                        className="h-full w-full object-cover"
-                      />
-                      {idx === 0 ? (
-                        <span className="absolute top-1.5 left-1.5 rounded bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-slate-950">
-                          {lang === "kk" ? "Негізгі" : "Главное"}
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleSetMainImage(idx)}
-                          className="absolute bottom-1.5 left-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white hover:bg-black cursor-pointer"
-                        >
-                          {lang === "kk" ? "Негізгі ету" : "Сделать главным"}
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveImage(idx)}
-                        className="absolute top-1.5 right-1.5 rounded bg-red-600 px-1.5 py-0.5 text-xs font-bold text-white hover:bg-red-700 cursor-pointer"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
             <div>
@@ -885,7 +610,7 @@ export default function AdminPage() {
             <div className="flex flex-wrap gap-3">
               <button
                 type="submit"
-                disabled={loading || uploadingImage}
+                disabled={loading}
                 className="flex-1 rounded-xl bg-blue-700 hover:bg-blue-800 disabled:opacity-60 text-white font-semibold py-3 px-4 transition cursor-pointer"
               >
                 {loading
@@ -914,7 +639,6 @@ export default function AdminPage() {
           </form>
         </div>
 
-        {/* Жарияланған мақалаларды басқару тізімі */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
           <h2 className="text-lg font-bold text-slate-900 mb-4">
             {lang === "kk"

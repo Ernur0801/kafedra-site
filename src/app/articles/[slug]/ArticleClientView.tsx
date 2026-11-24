@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useLanguage, type Lang } from "@/context/LanguageContext";
 import { useTheme } from "@/context/ThemeContext";
+import ArticleGallery from "@/components/ArticleGallery";
 
 export type ArticleDetail = {
   id: number | string;
@@ -41,9 +42,6 @@ const TEXTS = {
     goHome: "Басты бетке өту",
     readTime: (mins: number) => `~${mins} мин оқу`,
     authorLabel: "Авторы:",
-    close: "Жабу ✕",
-    prevPhoto: "← Алдыңғы",
-    nextPhoto: "Келесі →",
   },
   ru: {
     logoAlt: "Логотип КазНУ им. аль-Фараби",
@@ -60,9 +58,6 @@ const TEXTS = {
     goHome: "На главную",
     readTime: (mins: number) => `~${mins} мин чтения`,
     authorLabel: "Автор:",
-    close: "Закрыть ✕",
-    prevPhoto: "← Назад",
-    nextPhoto: "Далее →",
   },
   en: {
     logoAlt: "Al-Farabi Kazakh National University logo",
@@ -79,9 +74,6 @@ const TEXTS = {
     goHome: "Go to home",
     readTime: (mins: number) => `~${mins} min read`,
     authorLabel: "Author:",
-    close: "Close ✕",
-    prevPhoto: "← Prev",
-    nextPhoto: "Next →",
   },
 };
 
@@ -100,7 +92,6 @@ export default function ArticleClientView({
   const [loading, setLoading] = useState(!initialArticle);
   const [notFoundState, setNotFoundState] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (initialArticle) {
@@ -135,6 +126,7 @@ export default function ArticleClientView({
   const galleryImages = useMemo(() => {
     if (!article) return [];
     const list: string[] = [];
+
     if (Array.isArray(article.images)) {
       for (const item of article.images) {
         if (typeof item === "string" && item.trim() && !list.includes(item.trim())) {
@@ -142,6 +134,7 @@ export default function ArticleClientView({
         }
       }
     }
+
     if (
       typeof article.image === "string" &&
       article.image.trim() &&
@@ -149,6 +142,7 @@ export default function ArticleClientView({
     ) {
       list.unshift(article.image.trim());
     }
+
     return list.slice(0, 4);
   }, [article]);
 
@@ -187,9 +181,6 @@ export default function ArticleClientView({
   function handlePrint() {
     window.print();
   }
-
-  const galleryGridClass =
-    galleryImages.length === 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2";
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 transition-colors">
@@ -296,24 +287,7 @@ export default function ArticleClientView({
               </p>
             )}
 
-            {galleryImages.length > 0 && (
-              <div className={`grid ${galleryGridClass} gap-4 my-6`}>
-                {galleryImages.map((src, idx) => (
-                  <button
-                    key={`${src}-${idx}`}
-                    type="button"
-                    onClick={() => setActivePhotoIndex(idx)}
-                    className="group relative aspect-video w-full overflow-hidden rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 text-left cursor-pointer focus:outline-none"
-                  >
-                    <img
-                      src={src}
-                      alt={`${article.title} — ${idx + 1}`}
-                      className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.02]"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
+            <ArticleGallery images={galleryImages} title={article.title} />
 
             <div className="space-y-4 text-slate-800 dark:text-slate-200 leading-relaxed text-base">
               {paragraphs.map((paragraph, idx) => (
@@ -323,66 +297,6 @@ export default function ArticleClientView({
           </article>
         )}
       </main>
-
-      {activePhotoIndex !== null && galleryImages[activePhotoIndex] && (
-        <div
-          onClick={() => setActivePhotoIndex(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative max-w-4xl w-full space-y-3"
-          >
-            <div className="flex items-center justify-between text-white text-sm">
-              <span>
-                {activePhotoIndex + 1} / {galleryImages.length}
-              </span>
-              <button
-                type="button"
-                onClick={() => setActivePhotoIndex(null)}
-                className="px-3 py-1 rounded-lg bg-white/15 hover:bg-white/25 cursor-pointer"
-              >
-                {t.close}
-              </button>
-            </div>
-
-            <img
-              src={galleryImages[activePhotoIndex]}
-              alt={`${article?.title || "Photo"} — ${activePhotoIndex + 1}`}
-              className="w-full max-h-[78vh] object-contain rounded-xl bg-black"
-            />
-
-            {galleryImages.length > 1 && (
-              <div className="flex justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setActivePhotoIndex((prev) =>
-                      prev === null
-                        ? 0
-                        : (prev - 1 + galleryImages.length) % galleryImages.length
-                    )
-                  }
-                  className="px-4 py-1.5 rounded-lg bg-white/15 text-white hover:bg-white/25 cursor-pointer"
-                >
-                  {t.prevPhoto}
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setActivePhotoIndex((prev) =>
-                      prev === null ? 0 : (prev + 1) % galleryImages.length
-                    )
-                  }
-                  className="px-4 py-1.5 rounded-lg bg-white/15 text-white hover:bg-white/25 cursor-pointer"
-                >
-                  {t.nextPhoto}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
