@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -25,67 +26,91 @@ const LANG_OPTIONS: { code: Lang; label: string }[] = [
 
 const TEXTS = {
   kk: {
-    logoAlt: "Әл-Фараби атындағы ҚазҰУ логотипі",
-    faculty: "Әл-Фараби атындағы ҚазҰУ • Филология факультеті",
-    deptTitle: "Орыс филологиясы және әлем әдебиеті кафедрасы",
+    faculty: "ӘЛ-ФАРАБИ АТЫНДАҒЫ ҚАЗҰУ",
+    facultySub: "ФИЛОЛОГИЯ ФАКУЛЬТЕТІ",
+    deptTitle: "Орыс филологиясы және әлем әдебиеті",
+    deptLabel: "КАФЕДРАСЫ",
     deptSubtitle:
-      "Кафедраның имидждік мақалалары, ғылыми-әдістемелік жаңалықтары және баспасөз беттеріндегі жарияланымдар.",
-    adminBtn: "+ Мақала қосу / Басқару",
-    searchPlaceholder: "Тақырып, автор немесе кілт сөз бойынша іздеу...",
+      "Ғылым, тіл және әдебиет тоғысқан кеңістік. Академиялық жаңалықтар, ғылыми жетістіктер және кафедра өмірінен маңызды жарияланымдар.",
+    explore: "Жарияланымдарды қарау",
+    featured: "ТАҢДАУЛЫ ЖАРИЯЛАНЫМ",
+    latest: "СОҢҒЫ ЖАРИЯЛАНЫМДАР",
+    allArticles: "Барлық мақалалар",
+    searchPlaceholder: "Мақала, автор немесе тақырып бойынша іздеу...",
     allCategories: "Барлығы",
-    foundCount: (count: number) => `Табылды: ${count} мақала`,
+    foundCount: (count: number) => `${count} жарияланым табылды`,
     resetFilter: "Сүзгіні тазарту",
-    newBadge: "Жаңа",
+    newBadge: "ЖАҢА",
     readMore: "Толық оқу",
-    loading: "Мақалалар жүктелуде...",
+    loading: "Жарияланымдар жүктелуде...",
     empty: "Сұранысыңызға сәйкес мақалалар табылмады.",
-    lightMode: "Күндізгі",
-    darkMode: "Түнгі",
-    footerAbout:
-      "Орыс филологиясы және әлем әдебиеті кафедрасы — ғылыми-әдістемелік жұмыс, әдебиеттану және тіл білімі бағыттары.",
-    footerCopy: "© 2026 Әл-Фараби атындағы ҚазҰУ",
+    lightMode: "Күндізгі режим",
+    darkMode: "Түнгі режим",
+    adminBtn: "Басқару",
+    about: "БІЗ ТУРАЛЫ",
+    aboutText:
+      "Орыс филологиясы және әлем әдебиеті кафедрасы — тіл білімі, әдебиеттану және ғылыми-әдістемелік бағыттар бойынша академиялық қызмет атқаратын университеттік орта.",
+    footerFaculty: "Филология факультеті",
+    footerCopy: "© 2026 Әл-Фараби атындағы Қазақ ұлттық университеті",
+    academic: "ҒЫЛЫМ • БІЛІМ • ӘДЕБИЕТ",
   },
   ru: {
-    logoAlt: "Логотип КазНУ им. аль-Фараби",
-    faculty: "КазНУ им. аль-Фараби • Филологический факультет",
-    deptTitle: "Кафедра русской филологии и мировой литературы",
+    faculty: "КАЗНУ ИМЕНИ АЛЬ-ФАРАБИ",
+    facultySub: "ФИЛОЛОГИЧЕСКИЙ ФАКУЛЬТЕТ",
+    deptTitle: "Русская филология и мировая литература",
+    deptLabel: "КАФЕДРА",
     deptSubtitle:
-      "Имиджевые статьи кафедры, научно-методические новости и публикации в средствах массовой информации.",
-    adminBtn: "+ Добавить / Управление",
-    searchPlaceholder: "Поиск по заголовку, автору или ключевому слову...",
+      "Пространство науки, языка и литературы. Академические новости, научные достижения и важные публикации из жизни кафедры.",
+    explore: "Смотреть публикации",
+    featured: "ИЗБРАННАЯ ПУБЛИКАЦИЯ",
+    latest: "ПОСЛЕДНИЕ ПУБЛИКАЦИИ",
+    allArticles: "Все статьи",
+    searchPlaceholder: "Поиск по статье, автору или теме...",
     allCategories: "Все",
-    foundCount: (count: number) => `Найдено статей: ${count}`,
+    foundCount: (count: number) => `Найдено публикаций: ${count}`,
     resetFilter: "Сбросить фильтр",
-    newBadge: "Новое",
+    newBadge: "НОВОЕ",
     readMore: "Читать полностью",
-    loading: "Загрузка статей...",
+    loading: "Загрузка публикаций...",
     empty: "По вашему запросу статьи не найдены.",
-    lightMode: "Светлая",
-    darkMode: "Тёмная",
-    footerAbout:
-      "Кафедра русской филологии и мировой литературы — научно-методическая работа, литературоведение и языкознание.",
-    footerCopy: "© 2026 КазНУ им. аль-Фараби",
+    lightMode: "Светлая тема",
+    darkMode: "Тёмная тема",
+    adminBtn: "Управление",
+    about: "О КАФЕДРЕ",
+    aboutText:
+      "Кафедра русской филологии и мировой литературы — академическая среда, объединяющая языкознание, литературоведение и научно-методическую деятельность.",
+    footerFaculty: "Филологический факультет",
+    footerCopy: "© 2026 Казахский национальный университет имени аль-Фараби",
+    academic: "НАУКА • ОБРАЗОВАНИЕ • ЛИТЕРАТУРА",
   },
   en: {
-    logoAlt: "Al-Farabi Kazakh National University logo",
-    faculty: "Al-Farabi KazNU • Faculty of Philology",
-    deptTitle: "Department of Russian Philology and World Literature",
+    faculty: "AL-FARABI KAZAKH NATIONAL UNIVERSITY",
+    facultySub: "FACULTY OF PHILOLOGY",
+    deptTitle: "Russian Philology and World Literature",
+    deptLabel: "DEPARTMENT",
     deptSubtitle:
-      "Featured department articles, academic and methodological news, and media publications.",
-    adminBtn: "+ Add / Manage",
-    searchPlaceholder: "Search by title, author, or keyword...",
+      "Where science, language and literature meet. Academic news, research achievements and important stories from the department.",
+    explore: "Explore publications",
+    featured: "FEATURED PUBLICATION",
+    latest: "LATEST PUBLICATIONS",
+    allArticles: "All articles",
+    searchPlaceholder: "Search by article, author or topic...",
     allCategories: "All",
-    foundCount: (count: number) => `Articles found: ${count}`,
-    resetFilter: "Reset filter",
-    newBadge: "New",
-    readMore: "Read more",
-    loading: "Loading articles...",
-    empty: "No articles match your search criteria.",
-    lightMode: "Light",
-    darkMode: "Dark",
-    footerAbout:
-      "Department of Russian Philology and World Literature — academic methodology, literary studies, and linguistics.",
+    foundCount: (count: number) => `${count} publications found`,
+    resetFilter: "Reset filters",
+    newBadge: "NEW",
+    readMore: "Read full article",
+    loading: "Loading publications...",
+    empty: "No articles match your search.",
+    lightMode: "Light mode",
+    darkMode: "Dark mode",
+    adminBtn: "Management",
+    about: "ABOUT THE DEPARTMENT",
+    aboutText:
+      "The Department of Russian Philology and World Literature is an academic environment bringing together linguistics, literary studies and research methodology.",
+    footerFaculty: "Faculty of Philology",
     footerCopy: "© 2026 Al-Farabi Kazakh National University",
+    academic: "SCIENCE • EDUCATION • LITERATURE",
   },
 };
 
@@ -102,21 +127,23 @@ export default function HomePage() {
   useEffect(() => {
     async function loadArticles() {
       setLoading(true);
+
       const { data, error } = await supabase
         .from("articles")
         .select("id, slug, title, date, category, author, image, summary")
         .order("id", { ascending: false });
 
       if (!error && data) {
-        setArticles(data);
+        setArticles(data as ArticleItem[]);
+      } else if (error) {
+        console.error("Articles loading error:", error.message);
       }
+
       setLoading(false);
     }
 
     loadArticles();
   }, []);
-
-  const latestArticleId = articles.length > 0 ? articles[0].id : null;
 
   const categories = useMemo(() => {
     const unique = Array.from(
@@ -128,14 +155,16 @@ export default function HomePage() {
   const filteredArticles = useMemo(() => {
     return articles.filter((article) => {
       const matchesCategory =
-        selectedCategory === "ALL" || article.category === selectedCategory;
+        selectedCategory === "ALL" ||
+        article.category === selectedCategory;
 
       const q = searchQuery.trim().toLowerCase();
+
       const matchesSearch =
         !q ||
         article.title.toLowerCase().includes(q) ||
         article.summary.toLowerCase().includes(q) ||
-        (article.author && article.author.toLowerCase().includes(q)) ||
+        (article.author || "").toLowerCase().includes(q) ||
         article.category.toLowerCase().includes(q);
 
       return matchesCategory && matchesSearch;
@@ -145,43 +174,58 @@ export default function HomePage() {
   const hasActiveFilter =
     searchQuery.trim() !== "" || selectedCategory !== "ALL";
 
+  const featuredArticle =
+    !hasActiveFilter && filteredArticles.length > 0
+      ? filteredArticles[0]
+      : null;
+
+  const galleryArticles = featuredArticle
+    ? filteredArticles.filter((a) => a.id !== featuredArticle.id)
+    : filteredArticles;
+
+  const latestArticleId = articles.length > 0 ? articles[0].id : null;
+
   function handleResetFilters() {
     setSearchQuery("");
     setSelectedCategory("ALL");
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 flex flex-col transition-colors">
-      {/* Жоғарғы бөлім (Modern Header) */}
-      <header className="relative overflow-hidden bg-gradient-to-br from-[#002244] via-[#003366] to-[#0a4b8c] text-white shadow-lg">
-        <div className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-amber-400/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-sky-300/10 blur-3xl" />
+    <div className="min-h-screen flex flex-col bg-[#f6f7f9] dark:bg-[#090e18] text-slate-900 dark:text-slate-100 transition-colors duration-300">
 
-        <div className="relative max-w-5xl mx-auto px-4 py-8 md:py-10">
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-            <div className="flex items-center gap-3">
+      {/* HEADER */}
+      <header className="relative z-20 bg-[#082d50] text-white border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-5 lg:px-8">
+          <div className="min-h-[86px] flex flex-wrap items-center justify-between gap-4 py-4">
+
+            <Link href="/" className="flex items-center gap-3 group">
               <img
                 src="/kaznu-logo.png"
-                alt={t.logoAlt}
-                className="w-11 h-11 md:w-12 md:h-12 object-contain bg-white rounded-xl p-1 shadow-sm ring-1 ring-white/30 shrink-0"
+                alt={t.faculty}
+                className="w-12 h-12 md:w-14 md:h-14 object-contain bg-white rounded-xl p-1.5 shadow-lg"
               />
-              <p className="text-amber-300 text-xs font-semibold uppercase tracking-wider">
-                {t.faculty}
-              </p>
-            </div>
+
+              <div>
+                <p className="text-[11px] md:text-xs font-bold tracking-[0.13em] text-amber-300">
+                  {t.faculty}
+                </p>
+                <p className="text-[10px] tracking-[0.2em] text-blue-100/70 mt-1">
+                  {t.facultySub}
+                </p>
+              </div>
+            </Link>
 
             <div className="flex flex-wrap items-center gap-2">
-              {/* Тіл ауыстырғыш ҚАЗ / РУС / ENG */}
-              <div className="inline-flex rounded-full bg-white/10 backdrop-blur-md p-1 border border-white/15">
+              <div className="flex items-center rounded-full bg-white/10 border border-white/15 p-1">
                 {LANG_OPTIONS.map((item) => (
                   <button
                     key={item.code}
                     type="button"
                     onClick={() => setLang(item.code)}
-                    className={`px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer ${
+                    className={`rounded-full px-3 py-2 text-[11px] font-bold transition-all ${
                       lang === item.code
-                        ? "bg-amber-400 text-slate-950 shadow-sm"
-                        : "text-white/90 hover:bg-white/10"
+                        ? "bg-amber-400 text-[#082d50] shadow"
+                        : "text-white/80 hover:bg-white/10"
                     }`}
                   >
                     {item.label}
@@ -189,168 +233,355 @@ export default function HomePage() {
                 ))}
               </div>
 
-              {/* Dark / Light mode батырмасы */}
               <button
                 type="button"
                 onClick={toggleTheme}
                 aria-label={theme === "dark" ? t.lightMode : t.darkMode}
-                className="inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/15 px-3.5 py-1.5 text-xs font-semibold text-white transition cursor-pointer"
+                className="rounded-full border border-white/15 bg-white/10 px-3 py-2 text-xs hover:bg-white/20 transition"
               >
-                <span>{theme === "dark" ? "☀️" : "🌙"}</span>
-                <span>{theme === "dark" ? t.lightMode : t.darkMode}</span>
+                {theme === "dark" ? "☀️" : "🌙"}
               </button>
 
-              {/* Админ батырмасы */}
               <Link
                 href="/admin"
-                className="inline-flex items-center gap-1.5 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-950 px-4 py-1.5 text-xs font-bold shadow-sm transition"
+                className="rounded-full bg-amber-400 hover:bg-amber-300 text-[#082d50] px-4 py-2.5 text-xs font-extrabold transition shadow-lg shadow-black/10"
               >
-                {t.adminBtn}
+                + {t.adminBtn}
               </Link>
             </div>
           </div>
-
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight leading-tight max-w-3xl">
-            {t.deptTitle}
-          </h1>
-          <p className="mt-3 text-sm sm:text-base text-slate-200/90 max-w-2xl leading-relaxed">
-            {t.deptSubtitle}
-          </p>
         </div>
       </header>
 
-      {/* Негізгі бөлім */}
-      <main className="max-w-5xl w-full mx-auto px-4 py-8 flex-grow">
-        {/* Іздеу және рубрика сүзгісі */}
-        <div className="bg-white dark:bg-slate-900/90 rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 dark:border-slate-800 mb-6 space-y-4">
-          <div className="relative">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t.searchPlaceholder}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/70 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#003366] dark:focus:ring-amber-400/60 transition"
-            />
-          </div>
+      {/* HERO */}
+      <section className="relative overflow-hidden bg-[#082d50] text-white">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_20%,rgba(36,112,164,0.35),transparent_45%),linear-gradient(120deg,#082d50,#0c416d)]" />
 
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              {categories.map((cat) => {
-                const active = selectedCategory === cat;
-                const label = cat === "ALL" ? t.allCategories : cat;
-                return (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer ${
-                      active
-                        ? "bg-[#003366] dark:bg-amber-400 text-white dark:text-slate-950 shadow-sm"
-                        : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
+        <div className="absolute -right-32 -top-40 w-[550px] h-[550px] rounded-full border border-white/[0.07]" />
+        <div className="absolute -right-16 -top-24 w-[400px] h-[400px] rounded-full border border-white/[0.07]" />
+
+        <div className="relative max-w-7xl mx-auto px-5 lg:px-8 pt-16 pb-16 md:pt-24 md:pb-24">
+          <div className="max-w-4xl">
+            <div className="flex items-center gap-3 mb-7">
+              <span className="w-10 h-[2px] bg-amber-400" />
+              <span className="text-amber-300 text-[11px] sm:text-xs font-bold tracking-[0.22em]">
+                {t.academic}
+              </span>
             </div>
 
-            {hasActiveFilter && (
-              <button
-                type="button"
-                onClick={handleResetFilters}
-                className="text-xs font-semibold text-[#003366] dark:text-amber-400 hover:underline cursor-pointer"
+            <p className="text-blue-200/80 text-xs md:text-sm font-semibold tracking-[0.15em] mb-4">
+              {t.deptLabel}
+            </p>
+
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-[68px] font-bold leading-[1.08] tracking-tight">
+              {t.deptTitle}
+              <span className="text-amber-400">.</span>
+            </h1>
+
+            <p className="mt-7 max-w-2xl text-sm md:text-base lg:text-lg text-blue-100/80 leading-8">
+              {t.deptSubtitle}
+            </p>
+
+            <div className="mt-9 flex flex-wrap gap-4">
+              <a
+                href="#publications"
+                className="inline-flex items-center gap-3 rounded-full bg-amber-400 hover:bg-amber-300 text-[#082d50] px-6 py-3.5 text-sm font-extrabold transition shadow-xl shadow-black/10"
               >
-                {t.resetFilter}
-              </button>
-            )}
+                {t.explore}
+                <span className="text-lg">↓</span>
+              </a>
+
+              <div className="flex items-center gap-2 text-xs text-blue-100/60 px-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                {t.facultySub}
+              </div>
+            </div>
+          </div>
+
+          <div className="absolute bottom-0 right-8 hidden lg:block opacity-[0.07] pointer-events-none">
+            <span className="text-[250px] font-serif font-bold leading-none">Ф</span>
           </div>
         </div>
 
-        {/* Нәтиже саны */}
-        {!loading && (
-          <div className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            {t.foundCount(filteredArticles.length)}
-          </div>
-        )}
+        <div className="h-1 bg-gradient-to-r from-amber-400 via-amber-200 to-transparent" />
+      </section>
 
-        {loading ? (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-12 text-center border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400">
-            {t.loading}
-          </div>
-        ) : filteredArticles.length === 0 ? (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-12 text-center border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400">
-            {t.empty}
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2">
-            {filteredArticles.map((article) => {
-              const isLatest = article.id === latestArticleId;
-              return (
-                <article
-                  key={article.id}
-                  className="group bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-sm border border-slate-200/80 dark:border-slate-800 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 flex flex-col"
+      {/* MAIN */}
+      <main className="flex-grow">
+        <div className="max-w-7xl mx-auto px-5 lg:px-8 py-12 md:py-16">
+
+          {/* FEATURED ARTICLE */}
+          {!loading && featuredArticle && (
+            <section className="mb-16">
+              <div className="flex items-center gap-3 mb-6">
+                <span className="w-8 h-[2px] bg-amber-500" />
+                <p className="text-xs font-extrabold tracking-[0.2em] text-[#17466c] dark:text-amber-400">
+                  {t.featured}
+                </p>
+              </div>
+
+              <article className="group relative grid lg:grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-3xl bg-white dark:bg-[#111c2b] border border-slate-200 dark:border-slate-800 shadow-[0_15px_50px_rgba(15,35,60,0.08)]">
+                <Link
+                  href={`/articles/${featuredArticle.slug}`}
+                  className="relative block min-h-[260px] md:min-h-[380px] overflow-hidden bg-slate-200 dark:bg-slate-800"
                 >
-                  <Link
-                    href={`/articles/${article.slug}`}
-                    className="block overflow-hidden"
-                  >
+                  {featuredArticle.image && (
                     <img
-                      src={article.image}
-                      alt={article.title}
-                      className="w-full h-56 object-cover group-hover:scale-[1.03] transition-transform duration-300"
+                      src={featuredArticle.image}
+                      alt={featuredArticle.title}
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     />
-                  </Link>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
 
-                  <div className="p-6 flex flex-col flex-grow">
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-3">
-                      <span className="bg-blue-50 dark:bg-sky-950/70 text-[#003366] dark:text-sky-300 font-semibold px-2.5 py-1 rounded-full">
-                        {article.category}
-                      </span>
-                      <span>{article.date}</span>
-                      {isLatest && (
-                        <span className="bg-amber-100 dark:bg-amber-400/20 text-amber-900 dark:text-amber-300 font-bold px-2.5 py-0.5 rounded-full">
-                          {t.newBadge}
-                        </span>
-                      )}
-                    </div>
-
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2.5 leading-snug">
-                      <Link
-                        href={`/articles/${article.slug}`}
-                        className="hover:text-[#003366] dark:hover:text-amber-400 transition"
-                      >
-                        {article.title}
-                      </Link>
-                    </h2>
-
-                    <p className="text-slate-600 dark:text-slate-300 text-sm mb-6 line-clamp-3 flex-grow leading-relaxed">
-                      {article.summary}
-                    </p>
-
-                    <div>
-                      <Link
-                        href={`/articles/${article.slug}`}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-[#003366] dark:hover:bg-amber-400 text-slate-800 dark:text-slate-100 hover:text-white dark:hover:text-slate-950 px-4 py-2 text-xs font-bold transition"
-                      >
-                        <span>{t.readMore}</span>
-                        <span aria-hidden="true">→</span>
-                      </Link>
-                    </div>
+                  <div className="absolute bottom-5 left-5">
+                    <span className="inline-flex rounded-full bg-amber-400 text-[#082d50] px-3 py-1.5 text-[10px] font-extrabold tracking-wider">
+                      {t.featured}
+                    </span>
                   </div>
-                </article>
-              );
-            })}
-          </div>
-        )}
+                </Link>
+
+                <div className="flex flex-col justify-center p-7 md:p-10 lg:p-12">
+                  <div className="flex flex-wrap items-center gap-3 mb-6 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                    <span className="rounded-full bg-blue-50 dark:bg-blue-950/60 text-[#17466c] dark:text-blue-300 px-3 py-1.5">
+                      {featuredArticle.category}
+                    </span>
+                    <span>{featuredArticle.date}</span>
+                  </div>
+
+                  <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight text-slate-900 dark:text-white">
+                    {featuredArticle.title}
+                  </h2>
+
+                  <p className="mt-5 text-sm leading-7 text-slate-600 dark:text-slate-300 line-clamp-4">
+                    {featuredArticle.summary}
+                  </p>
+
+                  {featuredArticle.author && (
+                    <p className="mt-5 text-xs text-slate-500 dark:text-slate-400">
+                      {featuredArticle.author}
+                    </p>
+                  )}
+
+                  <div className="mt-8">
+                    <Link
+                      href={`/articles/${featuredArticle.slug}`}
+                      className="inline-flex items-center gap-3 text-sm font-extrabold text-[#17466c] dark:text-amber-400 hover:gap-5 transition-all"
+                    >
+                      {t.readMore}
+                      <span className="text-xl">→</span>
+                    </Link>
+                  </div>
+                </div>
+              </article>
+            </section>
+          )}
+
+          {/* PUBLICATIONS */}
+          <section id="publications" className="scroll-mt-8">
+
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 mb-8">
+              <div>
+                <p className="text-xs font-extrabold tracking-[0.2em] text-amber-600 dark:text-amber-400 mb-3">
+                  ACADEMIC JOURNAL
+                </p>
+                <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-[#102f4e] dark:text-white">
+                  {t.latest}
+                </h2>
+                <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+                  {t.foundCount(filteredArticles.length)}
+                </p>
+              </div>
+
+              <div className="text-xs font-semibold text-slate-400 dark:text-slate-500 tracking-widest">
+                KAZNU · PHILOLOGY
+              </div>
+            </div>
+
+            {/* SEARCH */}
+            <div className="rounded-2xl bg-white dark:bg-[#111c2b] border border-slate-200 dark:border-slate-800 shadow-sm p-4 md:p-5 mb-8">
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg">
+                  ⌕
+                </span>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t.searchPlaceholder}
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#0b1422] pl-12 pr-4 py-4 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400/70 transition"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 mt-4">
+                {categories.map((cat) => {
+                  const active = selectedCategory === cat;
+                  const label = cat === "ALL" ? t.allCategories : cat;
+
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`rounded-full px-4 py-2 text-xs font-bold transition ${
+                        active
+                          ? "bg-[#0c3a63] text-white dark:bg-amber-400 dark:text-[#082d50] shadow-md"
+                          : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+
+                {hasActiveFilter && (
+                  <button
+                    type="button"
+                    onClick={handleResetFilters}
+                    className="ml-auto text-xs font-bold text-amber-700 dark:text-amber-400 hover:underline"
+                  >
+                    {t.resetFilter}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* ARTICLES */}
+            {loading ? (
+              <div className="rounded-2xl bg-white dark:bg-[#111c2b] border border-slate-200 dark:border-slate-800 p-16 text-center text-slate-500">
+                {t.loading}
+              </div>
+            ) : filteredArticles.length === 0 ? (
+              <div className="rounded-2xl bg-white dark:bg-[#111c2b] border border-slate-200 dark:border-slate-800 p-16 text-center text-slate-500">
+                {t.empty}
+              </div>
+            ) : galleryArticles.length === 0 ? (
+              <div className="rounded-2xl bg-white dark:bg-[#111c2b] border border-slate-200 dark:border-slate-800 p-8 text-center text-sm text-slate-500">
+                {t.allArticles}
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {galleryArticles.map((article) => {
+                  const isLatest = article.id === latestArticleId;
+
+                  return (
+                    <article
+                      key={article.id}
+                      className="group flex flex-col overflow-hidden rounded-2xl bg-white dark:bg-[#111c2b] border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
+                    >
+                      <Link
+                        href={`/articles/${article.slug}`}
+                        className="relative block h-56 overflow-hidden bg-slate-200 dark:bg-slate-800"
+                      >
+                        {article.image && (
+                          <img
+                            src={article.image}
+                            alt={article.title}
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          />
+                        )}
+
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-70" />
+
+                        {isLatest && (
+                          <span className="absolute top-4 left-4 rounded-full bg-amber-400 text-[#082d50] px-3 py-1.5 text-[10px] font-extrabold tracking-wider">
+                            {t.newBadge}
+                          </span>
+                        )}
+                      </Link>
+
+                      <div className="flex flex-col flex-grow p-6">
+                        <div className="flex items-center justify-between gap-2 mb-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          <span className="text-[#1b527c] dark:text-blue-300">
+                            {article.category}
+                          </span>
+                          <span>{article.date}</span>
+                        </div>
+
+                        <h3 className="text-lg font-bold leading-snug text-slate-900 dark:text-white group-hover:text-[#1b527c] dark:group-hover:text-amber-400 transition-colors">
+                          <Link href={`/articles/${article.slug}`}>
+                            {article.title}
+                          </Link>
+                        </h3>
+
+                        <p className="mt-3 mb-6 text-sm leading-6 text-slate-500 dark:text-slate-400 line-clamp-3 flex-grow">
+                          {article.summary}
+                        </p>
+
+                        <Link
+                          href={`/articles/${article.slug}`}
+                          className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-4 text-xs font-extrabold text-[#17466c] dark:text-amber-400"
+                        >
+                          {t.readMore}
+                          <span className="text-lg group-hover:translate-x-1 transition-transform">
+                            →
+                          </span>
+                        </Link>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          {/* ABOUT SECTION */}
+          <section className="mt-20 relative overflow-hidden rounded-3xl bg-[#0b3559] text-white p-8 md:p-12 lg:p-16">
+            <div className="absolute -right-20 -top-28 w-80 h-80 rounded-full border border-white/10" />
+            <div className="absolute -right-10 -top-16 w-60 h-60 rounded-full border border-white/10" />
+
+            <div className="relative max-w-3xl">
+              <p className="text-amber-300 text-xs font-extrabold tracking-[0.2em] mb-5">
+                KAZNU · PHILOLOGY
+              </p>
+              <h2 className="text-2xl md:text-3xl font-bold mb-5">
+                {t.about}
+              </h2>
+              <p className="text-sm md:text-base leading-8 text-blue-100/80">
+                {t.aboutText}
+              </p>
+              <div className="mt-8 w-16 h-1 bg-amber-400 rounded-full" />
+            </div>
+          </section>
+
+        </div>
       </main>
 
-      {/* Төменгі бөлім (Footer) */}
-      <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 mt-14 py-7 px-4 text-center text-xs text-slate-500 dark:text-slate-400 space-y-1.5">
-        <p className="font-semibold text-slate-700 dark:text-slate-200">
-          {t.footerAbout}
-        </p>
-        <p>{t.footerCopy}</p>
+      {/* FOOTER */}
+      <footer className="bg-[#061e35] text-white mt-8">
+        <div className="max-w-7xl mx-auto px-5 lg:px-8 py-12">
+          <div className="grid md:grid-cols-2 gap-10 items-start">
+            <div className="flex items-start gap-4">
+              <img
+                src="/kaznu-logo.png"
+                alt={t.faculty}
+                className="w-14 h-14 object-contain bg-white rounded-xl p-1.5"
+              />
+              <div>
+                <p className="font-bold text-sm tracking-wide">
+                  {t.faculty}
+                </p>
+                <p className="mt-2 text-xs text-blue-200/60">
+                  {t.footerFaculty}
+                </p>
+              </div>
+            </div>
+
+            <div className="md:text-right">
+              <p className="text-xs font-bold tracking-widest text-amber-300 mb-3">
+                {t.about}
+              </p>
+              <p className="text-xs leading-6 text-blue-100/60 max-w-md md:ml-auto">
+                {t.aboutText}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-10 pt-6 border-t border-white/10 flex flex-col sm:flex-row justify-between gap-3 text-[11px] text-blue-100/50">
+            <p>{t.footerCopy}</p>
+            <p>AL-FARABI KAZNU · PHILOLOGY</p>
+          </div>
+        </div>
       </footer>
     </div>
   );
